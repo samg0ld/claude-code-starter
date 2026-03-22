@@ -7,7 +7,7 @@ A batteries-included configuration for [Claude Code](https://claude.ai/code) tha
 | Component | Count | What it does |
 |-----------|-------|-------------|
 | **Agents** | 13 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture decisions |
-| **Commands** | 19 | Slash commands like `/plan`, `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
+| **Commands** | 18 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
 | **Hooks** | 9 | Auto-formatting, type-checking, context freshness guard, session persistence |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
@@ -38,7 +38,7 @@ cd ~/Dev/claude-code-starter
 # Restart Claude Code to pick up changes
 ```
 
-That's it. You now have 13 agents, 19 commands, and 9 hooks active.
+That's it. You now have 13 agents, 18 commands, and 9 hooks active.
 
 ## Coming from ChatGPT / Codex?
 
@@ -47,7 +47,7 @@ If you're switching from ChatGPT or GitHub Copilot/Codex to Claude Code, here's 
 | Capability | ChatGPT | Codex | Claude Code + this starter |
 |-----------|---------|-------|---------------------------|
 | Specialized sub-agents | No | No | 13 agents with model routing |
-| Custom slash commands | No | No | 19 commands (`/plan`, `/tdd`, `/orchestrate`, etc.) |
+| Custom slash commands | No | No | 18 commands (`/tdd`, `/code-review`, `/orchestrate`, etc.) |
 | Pre/post tool hooks | No | No | Auto-format, type-check, context guard |
 | Session memory | Chat history only | No | Persistent context across sessions |
 | Pattern learning | No | No | `/learn` extracts and saves reusable patterns |
@@ -80,7 +80,6 @@ Specialized sub-agents launched via the Agent tool. Each has a focused prompt an
 
 Type `/` in Claude Code to see all available commands. Key ones:
 
-- **`/plan`** — Create an implementation plan, wait for your confirmation before coding
 - **`/tdd`** — Write tests first, then implement. Enforces 80%+ coverage.
 - **`/code-review`** — Review code for quality, security, and maintainability
 - **`/orchestrate`** — Run a multi-agent pipeline (plan → implement → review → security)

@@ -329,7 +329,6 @@ Prioritize E2E tests for your app's most critical paths:
 
 ## Integration with Other Commands
 
-- Use `/plan` to identify critical journeys to test
 - Use `/tdd` for unit tests (faster, more granular)
 - Use `/e2e` for integration and user journey tests
 - Use `/code-review` to verify test quality

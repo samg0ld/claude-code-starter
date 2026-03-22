@@ -61,7 +61,6 @@ Installed to `~/.claude/` by setup scripts. Most files are copied (not symlinked
 **Core** (use these first):
 | Command | What it does |
 |---------|-------------|
-| `/plan` | Create implementation plan, wait for confirmation |
 | `/code-review` | Review code for quality and issues |
 | `/tdd` | Test-driven development workflow |
 | `/build-fix` | Resolve build and type errors |
