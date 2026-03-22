@@ -1,6 +1,6 @@
 # claude-code-starter
 
-A batteries-included configuration for [Claude Code](https://claude.ai/code) that adds specialized agents, slash commands, automated hooks, and session persistence out of the box. Fork it, customize it, run the setup script.
+An opinionated configuration layer for [Claude Code](https://claude.ai/code) that enhances the built-in agents, commands, and hooks with specialized workflows, quality gates, and automation. Fork it, customize it, run the setup script.
 
 ## What you get
 
@@ -9,19 +9,20 @@ A batteries-included configuration for [Claude Code](https://claude.ai/code) tha
 | **Agents** | 13 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture decisions |
 | **Commands** | 18 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
-| **Hooks** | 9 | Auto-formatting, type-checking, context freshness guard, session persistence |
+| **Hooks** | 12 | Auto-formatting, type-checking, context freshness guard, session persistence |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
 | **Contexts** | 3 | Switch between dev, research, and review modes |
 
 ## Why this exists
 
-A fresh Claude Code install gives you a chat interface with tool access. That's it. No agents, no slash commands, no hooks, no session memory. This starter kit fills those gaps:
+Claude Code ships with agents, slash commands, hooks, and memory out of the box. This starter kit builds on that foundation with opinionated defaults so you don't have to configure everything from scratch:
 
-- **Agents with model routing** — The planner and security reviewer use Opus for deep reasoning; all other agents use default Sonnet for cost efficiency. Code reviewer runs automatically after you write code.
-- **Context freshness guard** — Claude Code doesn't warn you when context is getting stale. This hook tracks tool calls and context window usage, warns at thresholds, and prevents degraded responses.
-- **Session persistence** — Sessions end and knowledge is lost. The session hooks save context so the next session can pick up where you left off.
+- **Specialized agents with model routing** — 13 purpose-built agents for planning, code review, TDD, security, architecture, and more. Planner and security reviewer use Opus for deep reasoning; everything else uses Sonnet for cost efficiency.
+- **Context freshness guard** — Tracks tool calls and context window usage, warns at thresholds, and prevents degraded responses from stale context.
+- **Session persistence** — Session hooks save context so the next session can pick up where you left off.
 - **Continuous learning** — Run `/learn` after solving a non-trivial problem. The pattern is extracted and saved as a skill file that persists across sessions and machines via git.
 - **Auto-formatting and type-checking** — After every edit, Prettier formats and `tsc` type-checks automatically. Issues are caught before they compound.
+- **Quality-gated orchestration** — `/orchestrate` chains agents together with automatic quality gates between phases. If blockers are found, it fixes and re-checks before proceeding.
 - **Cross-platform** — Works on macOS and Windows. Setup scripts handle the differences.
 
 ## Quick start
@@ -38,21 +39,19 @@ cd ~/Dev/claude-code-starter
 # Restart Claude Code to pick up changes
 ```
 
-That's it. You now have 13 agents, 18 commands, and 9 hooks active.
+That's it. You now have 13 agents, 18 commands, and 12 hooks active.
 
-## Coming from ChatGPT / Codex?
+## What this adds over vanilla Claude Code
 
-If you're switching from ChatGPT or GitHub Copilot/Codex to Claude Code, here's what this gives you that those tools don't have:
-
-| Capability | ChatGPT | Codex | Claude Code + this starter |
-|-----------|---------|-------|---------------------------|
-| Specialized sub-agents | No | No | 13 agents with model routing |
-| Custom slash commands | No | No | 18 commands (`/tdd`, `/code-review`, `/orchestrate`, etc.) |
-| Pre/post tool hooks | No | No | Auto-format, type-check, context guard |
-| Session memory | Chat history only | No | Persistent context across sessions |
-| Pattern learning | No | No | `/learn` extracts and saves reusable patterns |
-| Multi-agent orchestration | No | No | `/orchestrate` chains planner → TDD → reviewer |
-| MCP server integration | Plugins (limited) | No | Full MCP protocol for any API |
+| Capability | Claude Code (built-in) | With this starter |
+|-----------|----------------------|-------------------|
+| Agents | General-purpose | 13 specialized agents with model routing |
+| Slash commands | Built-in basics | 18 additional workflow commands (`/tdd`, `/orchestrate`, etc.) |
+| Hooks | Framework exists | 9 pre-configured hooks (auto-format, type-check, context guard) |
+| Session memory | Memory system | Session hooks that save/restore context automatically |
+| Pattern learning | Skills system | `/learn` extracts and saves reusable patterns via git |
+| Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates |
+| Rules | Project-level CLAUDE.md | 7 opinionated rules (style, security, testing, git) |
 
 ## What's included
 
@@ -93,15 +92,18 @@ Hooks run automatically at specific lifecycle points:
 
 | Hook | When | What it does |
 |------|------|-------------|
+| `pre-bash-dev-server.js` | Before Bash | Blocks dev server outside tmux |
+| `pre-bash-tmux-suggest.js` | Before Bash | Suggests tmux for long-running commands |
+| `pre-bash-git-push.js` | Before Bash | Warns before git push |
 | `context-guard.js` | Before Edit/Write/Bash | Warns when context window is getting full |
 | `post-edit-format.js` | After Edit | Auto-formats with Prettier |
 | `post-edit-typecheck.js` | After Edit (.ts/.tsx) | Runs `tsc --noEmit` |
 | `post-edit-console-warn.js` | After Edit | Warns about `console.log` |
+| `post-bash-pr-log.js` | After Bash | Logs PR URL after `gh pr create` |
 | `check-console-log.js` | On Stop | Audits all modified files for console.log |
 | `session-start.js` | Session Start | Loads previous session context |
 | `session-end-obsidian.js` | Session End | Saves session status (optional, needs Obsidian) |
 | `pre-compact.js` | Before Compact | Saves state before context compression |
-| `evaluate-session.js` | Session End | Flags sessions worth running `/learn` on |
 
 ### Rules
 
