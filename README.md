@@ -28,7 +28,7 @@ A fresh Claude Code install gives you a chat interface with tool access. That's 
 
 ```bash
 # Clone
-git clone https://github.com/YOUR-USERNAME/claude-code-starter ~/Dev/claude-code-starter
+git clone https://github.com/SamG0ld/claude-code-starter ~/Dev/claude-code-starter
 cd ~/Dev/claude-code-starter
 
 # Install (copies config to ~/.claude/)
