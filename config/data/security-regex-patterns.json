@@ -1,0 +1,584 @@
+{
+  "$schema": "security-regex-patterns/v1",
+  "version": "1.0.0",
+  "description": "Zero-dependency security regex patterns for hybrid security scanning. Provides ~35% vulnerability coverage without external tools.",
+  "patterns": [
+    {
+      "id": "SECRET-001",
+      "name": "AWS Access Key ID",
+      "pattern": "(?:^|[^A-Za-z0-9/+=])(?:AKIA|ASIA)[A-Z0-9]{16}(?:[^A-Za-z0-9/+=]|$)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Hardcoded AWS access key ID. These keys grant programmatic access to AWS services.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-002",
+      "name": "AWS Secret Access Key",
+      "pattern": "(?i)(?:aws_secret_access_key|aws_secret_key|secret_access_key)\\s*[=:]\\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Hardcoded AWS secret access key.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-003",
+      "name": "RSA/DSA/EC Private Key",
+      "pattern": "-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----",
+      "severity": "CRITICAL",
+      "cwe": "CWE-321",
+      "description": "Private key material embedded in source code.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-004",
+      "name": "Generic Database Connection String",
+      "pattern": "(?i)(?:mysql|postgres|postgresql|mongodb|mssql|mariadb)://[^\\s'\"]+:[^\\s'\"]+@[^\\s'\"]+",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Database connection string with embedded credentials.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-005",
+      "name": "Generic API Key Assignment",
+      "pattern": "(?i)(?:api[_-]?key|apikey|api[_-]?secret)\\s*[=:]\\s*['\"][A-Za-z0-9_\\-]{20,}['\"]",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Hardcoded API key assigned to a variable.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-006",
+      "name": "GitHub Personal Access Token",
+      "pattern": "(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,255}",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "GitHub personal access token. Will be auto-revoked if pushed to public repos.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-007",
+      "name": "Slack Bot/Webhook Token",
+      "pattern": "xox[boaprs]-[A-Za-z0-9-]{10,250}",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Slack API token (bot, user, or webhook).",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-008",
+      "name": "Stripe Secret Key",
+      "pattern": "(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,99}",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Stripe secret or restricted key. Live keys grant access to financial operations.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-009",
+      "name": "Twilio API Key",
+      "pattern": "SK[a-f0-9]{32}",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Twilio API key SID.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-010",
+      "name": "SendGrid API Key",
+      "pattern": "SG\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "SendGrid API key.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-011",
+      "name": "Google API Key",
+      "pattern": "AIza[A-Za-z0-9_\\-]{35}",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Google API key.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-012",
+      "name": "Heroku API Key",
+      "pattern": "(?i)heroku[_\\s]*(?:api[_\\s]*)?key\\s*[=:]\\s*['\"]?[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}['\"]?",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Heroku API key in UUID format.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-013",
+      "name": "JWT Secret Assignment",
+      "pattern": "(?i)(?:jwt[_-]?secret|token[_-]?secret|signing[_-]?key)\\s*[=:]\\s*['\"][^'\"]{8,}['\"]",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Hardcoded JWT signing secret. Enables token forgery.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-014",
+      "name": "Password Assignment",
+      "pattern": "(?i)(?:password|passwd|pwd)\\s*[=:]\\s*['\"][^'\"]{4,}['\"]",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Hardcoded password literal. May be a false positive in test files.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-015",
+      "name": "OpenAI API Key",
+      "pattern": "sk-(?:proj-)?[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "OpenAI API key.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-016",
+      "name": "Azure Storage Account Key",
+      "pattern": "(?i)(?:account[_-]?key|storage[_-]?key)\\s*[=:]\\s*['\"]?[A-Za-z0-9+/]{86}==['\"]?",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Azure Storage account key (base64, 88 characters).",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-017",
+      "name": "Supabase Service Role Key",
+      "pattern": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.[A-Za-z0-9_-]{50,}\\.[A-Za-z0-9_-]{20,}",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "description": "Supabase JWT token (service role key bypasses RLS).",
+      "languages": ["*"]
+    },
+    {
+      "id": "SECRET-018",
+      "name": "Discord Bot Token",
+      "pattern": "[MN][A-Za-z\\d]{23,}\\.[\\w-]{6}\\.[\\w-]{27,}",
+      "severity": "HIGH",
+      "cwe": "CWE-798",
+      "description": "Discord bot or user token.",
+      "languages": ["*"]
+    },
+    {
+      "id": "SQLI-001",
+      "name": "SQL Injection via Python f-string",
+      "pattern": "(?:execute|cursor\\.execute|query|raw)\\s*\\(\\s*f['\"].*\\{.*\\}.*(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|WHERE|FROM)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "description": "SQL query constructed with f-string interpolation. Use parameterized queries.",
+      "languages": ["python"]
+    },
+    {
+      "id": "SQLI-002",
+      "name": "SQL Injection via String Concatenation",
+      "pattern": "(?:execute|query|raw)\\s*\\(\\s*['\"]\\s*(?:SELECT|INSERT|UPDATE|DELETE)\\b[^)]*\\+\\s*(?:req\\.|request\\.|params\\.|args\\.|user)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "description": "SQL query built by concatenating user input.",
+      "languages": ["javascript", "typescript", "python", "java", "csharp"]
+    },
+    {
+      "id": "SQLI-003",
+      "name": "SQL Injection via Template Literal",
+      "pattern": "(?:query|execute|raw|knex\\.raw|sequelize\\.query|prisma\\.\\$queryRaw)\\s*\\(\\s*`[^`]*\\$\\{[^}]*(?:req\\.|params\\.|body\\.|query\\.)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "description": "SQL query with template literal interpolation of request data.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "SQLI-004",
+      "name": "SQL Injection via Python format()",
+      "pattern": "(?:execute|cursor\\.execute|query)\\s*\\(\\s*['\"].*(?:SELECT|INSERT|UPDATE|DELETE).*['\"]\\s*\\.format\\s*\\(",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "description": "SQL query built with .format() string interpolation.",
+      "languages": ["python"]
+    },
+    {
+      "id": "SQLI-005",
+      "name": "SQL Injection via percent formatting",
+      "pattern": "(?:execute|cursor\\.execute|query)\\s*\\(\\s*['\"].*(?:SELECT|INSERT|UPDATE|DELETE).*%s.*['\"]\\s*%\\s*(?!\\(.*,.*\\))",
+      "severity": "HIGH",
+      "cwe": "CWE-89",
+      "description": "SQL query with % string formatting. Use parameterized placeholders via the second argument to execute().",
+      "languages": ["python"]
+    },
+    {
+      "id": "CMDI-001",
+      "name": "Command Injection via shell=True",
+      "pattern": "subprocess\\.(?:call|run|Popen|check_output|check_call)\\s*\\([^)]*shell\\s*=\\s*True",
+      "severity": "HIGH",
+      "cwe": "CWE-78",
+      "description": "subprocess with shell=True. Vulnerable if command string includes user input.",
+      "languages": ["python"]
+    },
+    {
+      "id": "CMDI-002",
+      "name": "Command Injection via os.system",
+      "pattern": "os\\.(?:system|popen)\\s*\\(\\s*(?:f['\"]|['\"].*\\+|.*\\.format\\(|.*%)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-78",
+      "description": "os.system/popen with dynamic command string. Use subprocess with argument list.",
+      "languages": ["python"]
+    },
+    {
+      "id": "CMDI-003",
+      "name": "Command Injection via child_process exec",
+      "pattern": "(?:exec|execSync)\\s*\\(\\s*(?:`[^`]*\\$\\{|['\"][^'\"]*\\+\\s*(?:req\\.|params\\.|user))",
+      "severity": "CRITICAL",
+      "cwe": "CWE-78",
+      "description": "child_process exec with interpolated user input. Use execFile with argument array.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "XSS-001",
+      "name": "XSS via innerHTML",
+      "pattern": "\\.innerHTML\\s*=\\s*(?!\\s*['\"]<)",
+      "severity": "HIGH",
+      "cwe": "CWE-79",
+      "description": "Assignment to innerHTML with dynamic content. Use textContent or sanitize with DOMPurify.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "XSS-002",
+      "name": "XSS via dangerouslySetInnerHTML",
+      "pattern": "dangerouslySetInnerHTML\\s*=\\s*\\{\\s*\\{\\s*__html\\s*:",
+      "severity": "HIGH",
+      "cwe": "CWE-79",
+      "description": "React dangerouslySetInnerHTML usage. Ensure content is sanitized.",
+      "languages": ["javascript", "typescript", "jsx", "tsx"]
+    },
+    {
+      "id": "XSS-003",
+      "name": "XSS via document.write",
+      "pattern": "document\\.write(?:ln)?\\s*\\(",
+      "severity": "HIGH",
+      "cwe": "CWE-79",
+      "description": "document.write can inject unsanitized content into DOM.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "XSS-004",
+      "name": "XSS via jQuery html()",
+      "pattern": "\\$\\s*\\([^)]*\\)\\.html\\s*\\(\\s*(?!\\s*['\"])",
+      "severity": "HIGH",
+      "cwe": "CWE-79",
+      "description": "jQuery .html() with dynamic content. Use .text() or sanitize.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "XSS-005",
+      "name": "XSS via v-html directive",
+      "pattern": "v-html\\s*=\\s*['\"]",
+      "severity": "MEDIUM",
+      "cwe": "CWE-79",
+      "description": "Vue v-html renders raw HTML. Ensure content is sanitized.",
+      "languages": ["vue", "javascript", "typescript"]
+    },
+    {
+      "id": "XSS-006",
+      "name": "XSS via bypassSecurityTrust",
+      "pattern": "(?:bypassSecurityTrustHtml|bypassSecurityTrustScript|bypassSecurityTrustUrl|bypassSecurityTrustResourceUrl)",
+      "severity": "HIGH",
+      "cwe": "CWE-79",
+      "description": "Angular DomSanitizer bypass. Validate input before bypassing security.",
+      "languages": ["typescript"]
+    },
+    {
+      "id": "DANGEROUS-001",
+      "name": "eval() Usage",
+      "pattern": "(?<![.'\"])\\beval\\s*\\(",
+      "severity": "HIGH",
+      "cwe": "CWE-95",
+      "description": "eval() executes arbitrary code. Use safer alternatives like JSON.parse().",
+      "languages": ["javascript", "typescript", "python"]
+    },
+    {
+      "id": "DANGEROUS-002",
+      "name": "Python exec/compile",
+      "pattern": "(?:^|[^.])\\b(?:exec|compile)\\s*\\(\\s*(?!\\s*['\"](?:pass|None))",
+      "severity": "HIGH",
+      "cwe": "CWE-95",
+      "description": "exec()/compile() with dynamic code. Dangerous if input is user-controlled.",
+      "languages": ["python"]
+    },
+    {
+      "id": "DANGEROUS-003",
+      "name": "Python pickle deserialization",
+      "pattern": "pickle\\.(?:loads?|Unpickler)\\s*\\(",
+      "severity": "HIGH",
+      "cwe": "CWE-502",
+      "description": "pickle deserialization can execute arbitrary code. Use json or msgpack for untrusted data.",
+      "languages": ["python"]
+    },
+    {
+      "id": "DANGEROUS-004",
+      "name": "Python yaml.load (unsafe)",
+      "pattern": "yaml\\.load\\s*\\([^)]*(?!Loader\\s*=\\s*(?:yaml\\.)?SafeLoader)",
+      "severity": "HIGH",
+      "cwe": "CWE-502",
+      "description": "yaml.load without SafeLoader allows arbitrary code execution. Use yaml.safe_load().",
+      "languages": ["python"]
+    },
+    {
+      "id": "DANGEROUS-005",
+      "name": "PHP unserialize",
+      "pattern": "unserialize\\s*\\(\\s*\\$",
+      "severity": "HIGH",
+      "cwe": "CWE-502",
+      "description": "PHP unserialize with user input enables object injection attacks.",
+      "languages": ["php"]
+    },
+    {
+      "id": "DANGEROUS-006",
+      "name": "Java deserialization",
+      "pattern": "(?:ObjectInputStream|readObject|readUnshared)\\s*\\(",
+      "severity": "HIGH",
+      "cwe": "CWE-502",
+      "description": "Java deserialization of untrusted data. Use allowlisting or alternative formats.",
+      "languages": ["java"]
+    },
+    {
+      "id": "DANGEROUS-007",
+      "name": "new Function() constructor",
+      "pattern": "new\\s+Function\\s*\\(",
+      "severity": "HIGH",
+      "cwe": "CWE-95",
+      "description": "Function constructor is equivalent to eval(). Avoid dynamic code generation.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "CRYPTO-001",
+      "name": "Weak Hash: MD5",
+      "pattern": "(?i)(?:md5|MD5)\\s*\\(|createHash\\s*\\(\\s*['\"]md5['\"]|hashlib\\.md5|MessageDigest\\.getInstance\\s*\\(\\s*['\"]MD5['\"]",
+      "severity": "MEDIUM",
+      "cwe": "CWE-328",
+      "description": "MD5 is cryptographically broken. Use SHA-256 or better for security-sensitive hashing.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CRYPTO-002",
+      "name": "Weak Hash: SHA1",
+      "pattern": "(?i)createHash\\s*\\(\\s*['\"]sha1?['\"]|hashlib\\.sha1|MessageDigest\\.getInstance\\s*\\(\\s*['\"]SHA-?1['\"]",
+      "severity": "MEDIUM",
+      "cwe": "CWE-328",
+      "description": "SHA-1 has known collision attacks. Use SHA-256 or SHA-3.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CRYPTO-003",
+      "name": "ECB Mode Usage",
+      "pattern": "(?i)(?:ECB|MODE_ECB|AES\\.MODE_ECB|cipher\\.ECB)",
+      "severity": "HIGH",
+      "cwe": "CWE-327",
+      "description": "ECB mode does not provide semantic security. Use GCM or CBC with HMAC.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CRYPTO-004",
+      "name": "Hardcoded IV/Nonce",
+      "pattern": "(?i)(?:iv|nonce|initialization.vector)\\s*=\\s*(?:b?['\"][^'\"]{8,}['\"]|\\[\\d)",
+      "severity": "HIGH",
+      "cwe": "CWE-329",
+      "description": "Hardcoded initialization vector or nonce. Use cryptographically random values.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CRYPTO-005",
+      "name": "Math.random for security",
+      "pattern": "Math\\.random\\s*\\(\\)",
+      "severity": "MEDIUM",
+      "cwe": "CWE-338",
+      "description": "Math.random() is not cryptographically secure. Use crypto.getRandomValues() or crypto.randomBytes().",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "TLS-001",
+      "name": "TLS Verification Disabled (Python)",
+      "pattern": "verify\\s*=\\s*False",
+      "severity": "HIGH",
+      "cwe": "CWE-295",
+      "description": "SSL/TLS certificate verification disabled. Enables MITM attacks.",
+      "languages": ["python"]
+    },
+    {
+      "id": "TLS-002",
+      "name": "TLS Verification Disabled (Node)",
+      "pattern": "(?:rejectUnauthorized|NODE_TLS_REJECT_UNAUTHORIZED)\\s*[=:]\\s*(?:false|0|['\"]0['\"])",
+      "severity": "HIGH",
+      "cwe": "CWE-295",
+      "description": "Node.js TLS certificate verification disabled.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "TLS-003",
+      "name": "TLS Verification Disabled (Go)",
+      "pattern": "InsecureSkipVerify\\s*:\\s*true",
+      "severity": "HIGH",
+      "cwe": "CWE-295",
+      "description": "Go TLS InsecureSkipVerify set to true.",
+      "languages": ["go"]
+    },
+    {
+      "id": "DEBUG-001",
+      "name": "Django DEBUG=True",
+      "pattern": "DEBUG\\s*=\\s*True",
+      "severity": "HIGH",
+      "cwe": "CWE-489",
+      "description": "Django DEBUG mode enabled. Leaks stack traces and settings in production.",
+      "languages": ["python"]
+    },
+    {
+      "id": "DEBUG-002",
+      "name": "Flask Debug Mode",
+      "pattern": "app\\.run\\s*\\([^)]*debug\\s*=\\s*True",
+      "severity": "HIGH",
+      "cwe": "CWE-489",
+      "description": "Flask running with debug=True enables the interactive debugger in production.",
+      "languages": ["python"]
+    },
+    {
+      "id": "DEBUG-003",
+      "name": "Express Detailed Errors",
+      "pattern": "app\\.use\\s*\\(\\s*(?:express\\.)?errorHandler\\s*\\(\\s*\\{[^}]*showStack|err\\.stack",
+      "severity": "MEDIUM",
+      "cwe": "CWE-209",
+      "description": "Detailed error stack traces exposed to client.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "PATH-001",
+      "name": "Path Traversal",
+      "pattern": "(?:readFile|readFileSync|createReadStream|open|access)\\s*\\(\\s*(?:req\\.|params\\.|query\\.|body\\.)",
+      "severity": "HIGH",
+      "cwe": "CWE-22",
+      "description": "File system operation with user-controlled path. Validate and sanitize path input.",
+      "languages": ["javascript", "typescript"]
+    },
+    {
+      "id": "PATH-002",
+      "name": "Python Path Traversal",
+      "pattern": "(?:open|Path)\\s*\\(\\s*(?:request\\.|args\\.|form\\.|params\\.)",
+      "severity": "HIGH",
+      "cwe": "CWE-22",
+      "description": "File open with user-controlled path. Use os.path.realpath and validate against a base directory.",
+      "languages": ["python"]
+    },
+    {
+      "id": "SSRF-001",
+      "name": "SSRF via fetch/axios/requests",
+      "pattern": "(?:fetch|axios\\.(?:get|post|put|delete|patch|request)|requests\\.(?:get|post|put|delete|patch))\\s*\\(\\s*(?:req\\.|params\\.|body\\.|query\\.|request\\.|args\\.)",
+      "severity": "HIGH",
+      "cwe": "CWE-918",
+      "description": "HTTP request with user-controlled URL. Validate against allowlist.",
+      "languages": ["javascript", "typescript", "python"]
+    },
+    {
+      "id": "AUTH-001",
+      "name": "Plaintext Password Comparison",
+      "pattern": "(?:password|passwd|pwd)\\s*(?:===?|==|!=|!==)\\s*(?:req\\.|params\\.|body\\.|stored|db|user)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-256",
+      "description": "Plaintext password comparison. Use bcrypt.compare() or argon2.verify().",
+      "languages": ["javascript", "typescript", "python"]
+    },
+    {
+      "id": "AUTH-002",
+      "name": "JWT None Algorithm",
+      "pattern": "(?i)(?:algorithm|alg)\\s*[=:]\\s*['\"]none['\"]",
+      "severity": "CRITICAL",
+      "cwe": "CWE-347",
+      "description": "JWT with 'none' algorithm allows unsigned tokens.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CORS-001",
+      "name": "Wildcard CORS",
+      "pattern": "(?i)(?:Access-Control-Allow-Origin|cors)\\s*[=:(]\\s*['\"]\\*['\"]",
+      "severity": "MEDIUM",
+      "cwe": "CWE-942",
+      "description": "Wildcard CORS allows any origin to make credentialed requests.",
+      "languages": ["*"]
+    },
+    {
+      "id": "CORS-002",
+      "name": "CORS Origin Reflection",
+      "pattern": "(?i)(?:origin|Access-Control-Allow-Origin)\\s*[=:]\\s*(?:req|request)\\.(?:headers?\\.)?origin",
+      "severity": "HIGH",
+      "cwe": "CWE-942",
+      "description": "CORS origin reflected from request without validation. Allows any origin.",
+      "languages": ["javascript", "typescript", "python"]
+    },
+    {
+      "id": "REDIRECT-001",
+      "name": "Open Redirect",
+      "pattern": "(?:redirect|location|Location)\\s*[=(]\\s*(?:req\\.|params\\.|query\\.|body\\.|request\\.(?:GET|POST|args))",
+      "severity": "MEDIUM",
+      "cwe": "CWE-601",
+      "description": "Redirect to user-controlled URL. Validate against allowlist of domains.",
+      "languages": ["javascript", "typescript", "python"]
+    },
+    {
+      "id": "HEADER-001",
+      "name": "Missing Security Headers",
+      "pattern": "(?i)helmet|x-frame-options|x-content-type-options|strict-transport-security",
+      "severity": "LOW",
+      "cwe": "CWE-693",
+      "description": "Search for security header configuration. Absence is a finding.",
+      "languages": ["javascript", "typescript"],
+      "note": "This is an inverse pattern: absence of matches indicates the issue."
+    },
+    {
+      "id": "LOG-001",
+      "name": "Sensitive Data in Logs",
+      "pattern": "(?:console\\.log|logger?\\.(?:info|debug|warn|error|log)|print|logging\\.(?:info|debug|warning|error))\\s*\\([^)]*(?:password|secret|token|key|credential|ssn|credit.?card)",
+      "severity": "MEDIUM",
+      "cwe": "CWE-532",
+      "description": "Potentially sensitive data written to logs.",
+      "languages": ["*"]
+    },
+    {
+      "id": "RACE-001",
+      "name": "TOCTOU File Race Condition",
+      "pattern": "(?:os\\.path\\.exists|os\\.access|Path\\(.*\\)\\.exists)\\s*\\([^)]+\\)\\s*(?::|\\{|then)\\s*(?:\\n\\s*)?(?:open|os\\.remove|shutil)",
+      "severity": "MEDIUM",
+      "cwe": "CWE-367",
+      "description": "Time-of-check to time-of-use race condition on file operations.",
+      "languages": ["python"]
+    },
+    {
+      "id": "TEMPLATE-001",
+      "name": "Server-Side Template Injection",
+      "pattern": "(?:render_template_string|Template)\\s*\\(\\s*(?:req|request|user|args|params)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-1336",
+      "description": "Template rendered from user input. Enables server-side template injection.",
+      "languages": ["python"]
+    },
+    {
+      "id": "HARDCODE-001",
+      "name": "Hardcoded IP Address",
+      "pattern": "(?:^|['\"])(?:10|172\\.(?:1[6-9]|2\\d|3[01])|192\\.168)\\.\\d{1,3}\\.\\d{1,3}(?:['\"]|$)",
+      "severity": "LOW",
+      "cwe": "CWE-798",
+      "description": "Hardcoded private IP address. Use configuration or service discovery.",
+      "languages": ["*"]
+    },
+    {
+      "id": "NOSQL-001",
+      "name": "NoSQL Injection",
+      "pattern": "(?:find|findOne|update|delete|aggregate|\\$where)\\s*\\(\\s*(?:req\\.|params\\.|body\\.|query\\.)",
+      "severity": "HIGH",
+      "cwe": "CWE-943",
+      "description": "MongoDB query with unsanitized user input. Validate and sanitize query operators.",
+      "languages": ["javascript", "typescript"]
+    }
+  ]
+}
