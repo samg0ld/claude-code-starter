@@ -47,7 +47,7 @@ That's it. You now have 13 agents, 18 commands, and 12 hooks active.
 |-----------|----------------------|-------------------|
 | Agents | General-purpose | 13 specialized agents with model routing |
 | Slash commands | Built-in basics | 18 additional workflow commands (`/tdd`, `/orchestrate`, etc.) |
-| Hooks | Framework exists | 9 pre-configured hooks (auto-format, type-check, context guard) |
+| Hooks | Framework exists | 12 pre-configured hooks (auto-format, type-check, context guard) |
 | Session memory | Memory system | Session hooks that save/restore context automatically |
 | Pattern learning | Skills system | `/learn` extracts and saves reusable patterns via git |
 | Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates |
