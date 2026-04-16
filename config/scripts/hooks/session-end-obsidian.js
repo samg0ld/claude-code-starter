@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
- * SessionEnd Hook — Update Obsidian project status on session end
+ * SessionEnd Hook — Update Obsidian project knowledge on session end
  *
  * Parses the session transcript and writes/updates:
- *   Development/<project>/Status.md
+ *   1. Development/<project>/Status.md — ephemeral session snapshot (overwritten)
+ *   2. Development/Logs/YYYY-MM.md — append-only monthly session log
+ *   3. Development/<project>/Session Insights.md — accumulated decisions & gotchas
+ *
+ * Insight extraction: scans user messages for decision/gotcha signal patterns
+ * (keyword matching, no LLM). Also captures git commit messages. Deduplicates
+ * against existing content. Enforces 20KB size cap (oldest entries trimmed).
  *
  * Project is determined from cwd → ~/Dev/<project-name>
  * Auto-maps any Dev project; override names via PROJECT_MAP in ../lib/obsidian.js
  * Vault path: OBSIDIAN_VAULT env var (strictly opt-in; no default)
- *
- * Also appends a lean entry to Development/Logs/YYYY-MM.md (monthly session log).
  *
  * Skips gracefully if:
  *   - cwd is not under ~/Dev
@@ -32,11 +36,37 @@ const {
   getVaultPath,
   getObsidianFolder,
   getObsidianLogPath,
-  getMonthDisplayName,
+  getMonthDisplayName
 } = require('../lib/obsidian');
 
 const DEV_DIR = 'Development';
 const TIMEOUT_MS = 8000;
+const INSIGHTS_MAX_BYTES = 20480; // 20KB cap for Session Insights.md
+
+/**
+ * Signal patterns that indicate a user message contains a decision, gotcha, or insight.
+ * These are intentionally conservative to reduce noise.
+ */
+const INSIGHT_SIGNALS = [
+  // Decisions
+  /\b(decided|chose|switched|picking)\b.*\b(to|from|over|instead)\b/i,
+  /\b(going with|went with|sticking with|moved to)\b/i,
+  // Gotchas and corrections
+  /\b(turns out|gotcha|watch out|careful|trap|pitfall)\b/i,
+  /\b(that'?s not|it'?s not|it'?s actually|actually it'?s)\b.*\b(a |the |how |what |where )/i,
+  /\b(wrong|broken|doesn'?t work)\b.*\b(because|since|due to)\b/i,
+  // Directives
+  /\b(don'?t use|never use|always use|must use)\b/i,
+  /\b(don'?t|never|stop|quit)\b.*\b(do that|doing that|change|touch|modify|guess)\b/i,
+  // Learnings
+  /\b(learned|discovered|realized|figured out)\b/i,
+  /\b(workaround|the fix was|root cause|the (real |actual )?problem)\b/i,
+  /\b(because|the reason)\b.*\b(is that|was that|it'?s)\b/i,
+  // Patterns and rules
+  /\b(pattern|approach|convention)\b.*\b(is|should|must)\b/i,
+  /\b(important:|note:|remember:|fyi:?)\b/i,
+  /\b(from now on|going forward|in the future)\b/i
+];
 
 /**
  * Extract meaningful session data from transcript
@@ -52,6 +82,18 @@ function parseTranscript(transcriptPath) {
   };
 
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
+    return result;
+  }
+
+  // Skip transcripts over 10MB to avoid memory exhaustion within 8s timeout
+  const MAX_TRANSCRIPT_BYTES = 10 * 1024 * 1024;
+  try {
+    const stat = fs.statSync(transcriptPath);
+    if (stat.size > MAX_TRANSCRIPT_BYTES) {
+      log(`[Obsidian] Transcript too large (${(stat.size / 1024 / 1024).toFixed(1)}MB), skipping parse`);
+      return result;
+    }
+  } catch {
     return result;
   }
 
@@ -267,6 +309,134 @@ function appendToSessionLog(parsed, sessionId, projectName) {
   log(`[Obsidian] Appended to session log: Development/Logs/${path.basename(logPath)}`);
 }
 
+/**
+ * Extract insight-worthy messages from parsed user messages.
+ * Returns array of strings — messages that match decision/gotcha signal patterns.
+ */
+function extractInsights(parsed) {
+  const insights = [];
+
+  // Negative patterns — filter out trivial matches
+  const NOISE_FILTERS = [
+    /^(yes|no|ok|sure|yeah|nah|do it|go ahead)\b/i,
+    /^(read|check|look at|open|show|run|list)\b/i,
+    /\b(the file|the directory|the path|the test)\b.*\b(at|in|from)\b/i
+  ];
+
+  // Extract from user messages that match signal patterns
+  for (const msg of parsed.userMessages) {
+    if (msg.length < 30 || msg.length > 500) continue;
+    if (msg.startsWith('<')) continue;
+    if (msg.split(/\s+/).length < 5) continue; // require 5+ words
+
+    const matchesSignal = INSIGHT_SIGNALS.some(pattern => pattern.test(msg));
+    if (!matchesSignal) continue;
+
+    const isNoise = NOISE_FILTERS.some(pattern => pattern.test(msg));
+    if (isNoise) continue;
+
+    // Clean up the message for storage
+    const cleaned = msg.replace(/\s+/g, ' ').trim();
+    insights.push(`"${cleaned}"`);
+  }
+
+  // Include git commit messages as lightweight decision records
+  for (const commit of parsed.gitCommits) {
+    insights.push(`Commit: ${commit.message} (\`${commit.hash}\`)`);
+  }
+
+  return insights;
+}
+
+/**
+ * Append extracted insights to Session Insights.md.
+ * Creates the file if it doesn't exist. Enforces a size cap by removing
+ * oldest date-headed blocks when the file exceeds INSIGHTS_MAX_BYTES.
+ */
+function appendInsights(insights, sessionId, projectDir, folderName) {
+  if (insights.length === 0) return;
+
+  const insightsPath = path.join(projectDir, 'Session Insights.md');
+  const today = getDateString();
+  const shortId = sessionId ? sessionId.slice(-8) : 'unknown';
+
+  // Deduplicate against existing lines (exact match, not substring)
+  const existing = readFile(insightsPath) || '';
+  const existingLines = new Set(
+    existing.split('\n').map(l => l.replace(/^- /, '').trim())
+  );
+  const newInsights = insights.filter(i => !existingLines.has(i));
+  if (newInsights.length === 0) {
+    log('[Obsidian] All insights already present, skipping');
+    return;
+  }
+
+  // Create file with frontmatter if it doesn't exist
+  if (!existing) {
+    const header = [
+      '---',
+      `tags: [development, insights, ${folderName}]`,
+      `project: ${folderName}`,
+      '---',
+      '',
+      '# Session Insights',
+      '',
+      'Auto-extracted decisions, gotchas, and patterns from coding sessions.',
+      '',
+      '---',
+      ''
+    ].join('\n');
+    fs.writeFileSync(insightsPath, header, 'utf8');
+  }
+
+  // Build entry
+  let entry = `\n## ${today} (session ${shortId})\n\n`;
+  for (const insight of newInsights) {
+    entry += `- ${insight}\n`;
+  }
+
+  fs.appendFileSync(insightsPath, entry, 'utf8');
+  log(`[Obsidian] Appended ${newInsights.length} insights to Session Insights.md`);
+
+  // Enforce size cap
+  enforceInsightsCap(insightsPath);
+}
+
+/**
+ * Enforce the size cap on Session Insights.md by removing oldest
+ * date-headed blocks until the file is under INSIGHTS_MAX_BYTES.
+ */
+function enforceInsightsCap(filePath) {
+  const content = readFile(filePath);
+  if (!content || Buffer.byteLength(content, 'utf8') <= INSIGHTS_MAX_BYTES) {
+    return;
+  }
+
+  // Split into header (before first date section) and date blocks
+  const datePattern = /^## \d{4}-\d{2}-\d{2}/m;
+  const firstMatch = content.match(datePattern);
+  if (!firstMatch) return;
+
+  const headerEnd = content.indexOf(firstMatch[0]);
+  const header = content.slice(0, headerEnd);
+  const body = content.slice(headerEnd);
+
+  const blocks = body.split(/(?=^## \d{4}-\d{2}-\d{2})/m).filter(b => b.trim());
+
+  // Remove oldest blocks from front until under cap — O(n) incremental
+  const headerBytes = Buffer.byteLength(header, 'utf8');
+  const blockBytes = blocks.map(b => Buffer.byteLength(b, 'utf8'));
+  let totalBytes = headerBytes + blockBytes.reduce((a, b) => a + b, 0);
+
+  while (blocks.length > 1 && totalBytes > INSIGHTS_MAX_BYTES) {
+    totalBytes -= blockBytes.shift();
+    blocks.shift();
+  }
+
+  fs.writeFileSync(filePath, header + blocks.join(''), 'utf8');
+  log('[Obsidian] Trimmed Session Insights.md to stay under size cap');
+}
+
 async function main() {
   const input = await readStdinJson();
 
@@ -289,7 +459,7 @@ async function main() {
 
   // Check vault exists
   const vaultPath = getVaultPath();
-  if (!fs.existsSync(vaultPath)) {
+  if (!vaultPath || !fs.existsSync(vaultPath)) {
     log(`[Obsidian] Vault not found at: ${vaultPath}`);
     process.exit(0);
   }
@@ -319,6 +489,12 @@ async function main() {
 
   // Append to global monthly session log
   appendToSessionLog(parsed, sessionId, obsidianFolder);
+
+  // Extract and append session insights
+  const insights = extractInsights(parsed);
+  if (insights.length > 0) {
+    appendInsights(insights, sessionId, statusDir, obsidianFolder);
+  }
 
   process.exit(0);
 }

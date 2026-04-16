@@ -9,7 +9,7 @@ An opinionated configuration layer for [Claude Code](https://claude.ai/code) tha
 | **Agents** | 13 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture decisions |
 | **Commands** | 18 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
-| **Hooks** | 12 | Auto-formatting, type-checking, context freshness guard, session persistence |
+| **Hooks** | 14 | Auto-formatting, type-checking, context freshness guard, session persistence |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
 | **Contexts** | 3 | Switch between dev, research, and review modes |
 
@@ -39,7 +39,7 @@ cd ~/Dev/claude-code-starter
 # Restart Claude Code to pick up changes
 ```
 
-That's it. You now have 13 agents, 18 commands, and 12 hooks active.
+That's it. You now have 13 agents, 18 commands, and 14 hooks active.
 
 ## What this adds over vanilla Claude Code
 
@@ -47,7 +47,7 @@ That's it. You now have 13 agents, 18 commands, and 12 hooks active.
 |-----------|----------------------|-------------------|
 | Agents | General-purpose | 13 specialized agents with model routing |
 | Slash commands | Built-in basics | 18 additional workflow commands (`/tdd`, `/orchestrate`, etc.) |
-| Hooks | Framework exists | 12 pre-configured hooks (auto-format, type-check, context guard) |
+| Hooks | Framework exists | 14 pre-configured hooks (auto-format, type-check, context guard, session persistence) |
 | Session memory | Memory system | Session hooks that save/restore context automatically |
 | Pattern learning | Skills system | `/learn` extracts and saves reusable patterns via git |
 | Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates |
@@ -101,8 +101,9 @@ Hooks run automatically at specific lifecycle points:
 | `post-edit-console-warn.js` | After Edit | Warns about `console.log` |
 | `post-bash-pr-log.js` | After Bash | Logs PR URL after `gh pr create` |
 | `check-console-log.js` | On Stop | Audits all modified files for console.log |
-| `session-start.js` | Session Start | Loads previous session context |
-| `session-end-obsidian.js` | Session End | Saves session status (optional, needs Obsidian) |
+| `evaluate-session.js` | On Stop | Signals pattern extraction for long sessions |
+| `session-start.js` | Session Start | Loads project knowledge (6 files, 30KB budget) |
+| `session-end-obsidian.js` | Session End | Saves status, extracts insights, writes monthly logs |
 | `pre-compact.js` | Before Compact | Saves state before context compression |
 
 ### Rules
@@ -147,15 +148,51 @@ See `examples/custom-skill-example.md` for a complete walkthrough.
 
 See `examples/mcp-server-example.md` for the full pattern including registration, health checks, and cross-platform setup.
 
-### Optional: Obsidian integration
+### Obsidian Integration (Optional but Recommended)
 
-If you use [Obsidian](https://obsidian.md) as a knowledge base:
+The session hooks integrate with [Obsidian](https://obsidian.md) to persist project knowledge across sessions. This is optional — hooks silently no-op if Obsidian isn't configured.
 
-1. Set `OBSIDIAN_VAULT=/path/to/your/vault` in your environment
-2. The session-start hook loads prior context from `Development/<project>/Status.md`
-3. The session-end hook writes status updates and monthly session logs
+**What it does:**
+- **Session start:** Loads up to 6 knowledge files (Status, Session Insights, Tech Debt, Bugs, Architecture, Decisions) with a 30KB budget cap
+- **Session end:** Writes session status, extracts insights from your messages, appends to monthly session logs
+- **Continuous learning:** Patterns and decisions accumulate in `Session Insights.md` with deduplication (20KB cap)
 
-This is disabled by default if `OBSIDIAN_VAULT` is not set.
+**Setup:**
+
+1. **Install Obsidian** — Download from [obsidian.md](https://obsidian.md) (free for personal use)
+
+2. **Create your vault structure:**
+   ```
+   Your-Vault/
+   └── Development/
+       ├── Logs/           # Monthly session logs (auto-created)
+       └── <project-name>/ # One folder per project
+           ├── Status.md
+           ├── Session Insights.md
+           ├── Tech Debt.md
+           ├── Bugs.md
+           ├── Architecture.md
+           └── Decisions.md
+   ```
+   
+   You don't need all files — hooks only load what exists.
+
+3. **Set the environment variable:**
+   ```bash
+   # Add to your shell profile (~/.zshrc, ~/.bashrc, etc.)
+   export OBSIDIAN_VAULT="/path/to/your/vault"
+   ```
+
+4. **Project name mapping:**
+   - By default, hooks use your `~/Dev/<project-name>` directory name
+   - To override, edit `config/scripts/lib/obsidian.js` and add to `PROJECT_MAP`
+
+**Recommended Obsidian plugins:**
+- [Dataview](https://github.com/blacksmithgu/obsidian-dataview) — Query your session data
+- [Templater](https://github.com/SilentVoid13/Templater) — Templates for new project folders
+
+**Without Obsidian:**
+All session hooks check for the vault and skip gracefully if not found. You lose session persistence but everything else works normally.
 
 ## Environment variables
 
@@ -187,6 +224,17 @@ node ~/.claude/scripts/check-mcp-health.js
 
 MIT
 
+## Prerequisites
+
+| Dependency | Required | What needs it |
+|------------|----------|---------------|
+| [Node.js](https://nodejs.org) | Yes (18+) | Hooks, health check |
+| [Claude Code CLI](https://claude.ai/code) | Yes | Everything |
+| [Git](https://git-scm.com) | Yes | Clone and sync |
+| [Obsidian](https://obsidian.md) | Optional | Session persistence, knowledge loading |
+
 ## Credits
 
 Built on [Claude Code](https://claude.ai/code) by [Anthropic](https://anthropic.com).
+
+Session persistence hooks inspired by [Andrej Karpathy's Claude Code setup](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).

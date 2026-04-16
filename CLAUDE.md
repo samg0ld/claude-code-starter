@@ -24,7 +24,7 @@ Installed to `~/.claude/` by setup scripts. Most files are copied (not symlinked
 - `rules/` — 7 coding rule files loaded as project instructions
 - `commands/` — 24 slash command definitions
 - `contexts/` — 3 context profiles (dev, research, review)
-- `scripts/hooks/` — Hook scripts for session lifecycle, edit validation, formatting
+- `scripts/hooks/` — 14 hook scripts for session lifecycle, edit validation, formatting, insight extraction
 - `scripts/check-mcp-health.js` — Cross-platform MCP health checker (reads configs from `~/.claude.json`)
 - `scripts/lib/` — Shared utilities: `utils.js` (generic), `obsidian.js` (optional Obsidian integration), `package-manager.js` (auto-detection)
 - `data/` — Static data files (e.g., security regex patterns)
@@ -143,7 +143,24 @@ Create a directory under `skills/` with a `SKILL.md` inside. See `examples/custo
 See `examples/mcp-server-example.md` for the full pattern.
 
 ### Obsidian integration (optional)
-Set `OBSIDIAN_VAULT` env var to your vault path. The session-start hook loads prior context from `Development/<project>/Status.md`, and session-end-obsidian writes status updates and monthly session logs. See `config/scripts/lib/obsidian.js`.
+
+The session hooks integrate with [Obsidian](https://obsidian.md) for project knowledge persistence:
+
+**Session start loads (30KB budget):**
+- `Development/<project>/Status.md` — Last session snapshot
+- `Development/<project>/Session Insights.md` — Accumulated decisions/gotchas
+- `Development/<project>/Tech Debt.md` — Open section only
+- `Development/<project>/Bugs.md` — Open section only
+- `Development/<project>/Architecture.md`
+- `Development/<project>/Decisions.md`
+
+**Session end writes:**
+- Updates `Status.md` with session summary
+- Extracts insights from your messages (keyword-based, no LLM)
+- Appends to `Session Insights.md` (deduped, 20KB cap)
+- Appends to `Development/Logs/YYYY-MM.md` monthly log
+
+**Setup:** Set `OBSIDIAN_VAULT` env var to your vault path. See README for full setup guide.
 
 ### Timezone
 Set `CLAUDE_TIMEZONE` env var (e.g., `America/New_York`). Defaults to system timezone.

@@ -10,9 +10,14 @@
  * Used by: session-start.js, session-end-obsidian.js
  */
 
-const fs = require('fs');
-const path = require('path');
-const { getProjectRoot, getHomeDir, getTimezone, isWindows } = require('./utils');
+const fs = require("fs");
+const path = require("path");
+const {
+  getProjectRoot,
+  getHomeDir,
+  getTimezone,
+  isWindows,
+} = require("./utils");
 
 /**
  * Get the Obsidian vault path.
@@ -23,7 +28,7 @@ function getVaultPath() {
     return process.env.OBSIDIAN_VAULT;
   }
   // Default path — override via OBSIDIAN_VAULT env var
-  const defaultPath = path.join(getHomeDir(), 'Obsidian', 'Life');
+  const defaultPath = path.join(getHomeDir(), "Obsidian", "Life");
   if (fs.existsSync(defaultPath)) {
     return defaultPath;
   }
@@ -63,7 +68,7 @@ function getObsidianStatusPath(cwd) {
   const vaultPath = getVaultPath();
   if (!vaultPath || !fs.existsSync(vaultPath)) return null;
 
-  return path.join(vaultPath, 'Development', folder, 'Status.md');
+  return path.join(vaultPath, "Development", folder, "Status.md");
 }
 
 /**
@@ -77,11 +82,27 @@ function getObsidianLogPath() {
 
   const tz = getTimezone();
   const now = new Date();
-  const central = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+  const central = new Date(now.toLocaleString("en-US", { timeZone: tz }));
   const year = central.getFullYear();
-  const month = String(central.getMonth() + 1).padStart(2, '0');
+  const month = String(central.getMonth() + 1).padStart(2, "0");
 
-  return path.join(vaultPath, 'Development', 'Logs', `${year}-${month}.md`);
+  return path.join(vaultPath, "Development", "Logs", `${year}-${month}.md`);
+}
+
+/**
+ * Get the Obsidian project directory path.
+ * Returns the full path to Development/<project>/ in the vault,
+ * or null if not in a Dev project, vault is missing, or dir doesn't exist.
+ */
+function getObsidianProjectDir(cwd) {
+  const folder = getObsidianFolder(cwd);
+  if (!folder) return null;
+
+  const vaultPath = getVaultPath();
+  if (!vaultPath || !fs.existsSync(vaultPath)) return null;
+
+  const dir = path.join(vaultPath, "Development", folder);
+  return fs.existsSync(dir) ? dir : null;
 }
 
 /**
@@ -90,13 +111,18 @@ function getObsidianLogPath() {
 function getMonthDisplayName() {
   const tz = getTimezone();
   const now = new Date();
-  const central = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-  return central.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: tz });
+  const central = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+  return central.toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: tz,
+  });
 }
 
 module.exports = {
   getVaultPath,
   getObsidianFolder,
+  getObsidianProjectDir,
   getObsidianStatusPath,
   getObsidianLogPath,
   getMonthDisplayName,
