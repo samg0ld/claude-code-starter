@@ -147,6 +147,7 @@ See `examples/mcp-server-example.md` for the full pattern.
 The session hooks integrate with [Obsidian](https://obsidian.md) for project knowledge persistence:
 
 **Session start loads (30KB budget):**
+- `Development/<project>/Focus.md` — Current task focus (loaded first, used by pre-compact)
 - `Development/<project>/Status.md` — Last session snapshot
 - `Development/<project>/Session Insights.md` — Accumulated decisions/gotchas
 - `Development/<project>/Tech Debt.md` — Open section only
@@ -168,6 +169,22 @@ Set `CLAUDE_TIMEZONE` env var (e.g., `America/New_York`). Defaults to system tim
 ### Dev roots
 Set `CLAUDE_DEV_ROOT` env var if your projects aren't in `~/Dev`. The hooks use this to resolve project names.
 
+## Context Management
+
+Session hooks and context management are designed around Anthropic's guidance:
+
+- **Context rot is real** — Performance degrades as context expands. Use `/clear` for new tasks.
+- **Subagents for isolation** — Use when task generates intermediate output you won't need again.
+- **Compact with hints** — `pre-compact.js` reads `Focus.md` and git context to guide compaction.
+- **Handoff for transitions** — `/handoff` creates structured summaries before `/clear` or rewind.
+
+| Situation | Action |
+|-----------|--------|
+| New task | `/clear` (session hooks reload context from Obsidian) |
+| Wrong approach | Rewind (`Esc Esc`), use `/handoff` first to document what failed |
+| Stale context | `/compact` with hint |
+| Lots of intermediate output | Delegate to subagent |
+
 ## Key Files
 
 | File | Purpose |
@@ -176,3 +193,8 @@ Set `CLAUDE_DEV_ROOT` env var if your projects aren't in `~/Dev`. The hooks use 
 | `config/settings.template.json` | Hook configuration template |
 | `config/scripts/check-mcp-health.js` | Verify all MCP servers are healthy |
 | `examples/` | Templates for custom skills and MCP servers |
+
+## References
+
+- [Claude Code: Session Management and 1M Context](https://claude.com/blog/using-claude-code-session-management-and-1m-context) — Anthropic's guide to context rot, compaction, rewind, and subagents
+- [Andrej Karpathy's Claude Code setup](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — Inspiration for session persistence hooks

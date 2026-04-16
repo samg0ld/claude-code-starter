@@ -39,6 +39,28 @@ Launch 3 agents in parallel:
 First agent 1, then agent 2, then agent 3
 ```
 
+## Subagents for Context Isolation
+
+Subagents run with clean context windows. Use them when a task generates lots of intermediate output you won't need again.
+
+**The test:** "Will I need this tool output again, or just the conclusion?"
+
+If just the conclusion → delegate to a subagent. The intermediate noise stays in the child context.
+
+**Good candidates for subagents:**
+- Verifying results against specifications (lots of reads, only need pass/fail)
+- Reviewing alternate codebases and synthesizing approaches
+- Writing documentation based on git changes
+- Running test suites and summarizing failures
+- Scanning for patterns across many files
+
+**Keep in main context:**
+- Debugging sessions where you're iterating on the same code
+- Implementation work where prior reads inform next edits
+- Conversations where context from earlier matters
+
+Reference: [Claude Code: Session Management and 1M Context](https://claude.com/blog/using-claude-code-session-management-and-1m-context)
+
 ## Multi-Perspective Analysis
 
 For complex problems, use split role sub-agents:

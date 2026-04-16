@@ -7,7 +7,7 @@ An opinionated configuration layer for [Claude Code](https://claude.ai/code) tha
 | Component | Count | What it does |
 |-----------|-------|-------------|
 | **Agents** | 13 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture decisions |
-| **Commands** | 18 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
+| **Commands** | 19 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
 | **Hooks** | 14 | Auto-formatting, type-checking, context freshness guard, session persistence |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
@@ -220,6 +220,34 @@ Verify all your MCP servers are healthy:
 node ~/.claude/scripts/check-mcp-health.js
 ```
 
+## Context Management
+
+Session hooks and context management are designed around Anthropic's guidance on context rot and session hygiene.
+
+**Key principles:**
+- **Context rot is real** — Performance degrades as context expands. Use `/clear` for new tasks.
+- **Subagents for isolation** — Use when task generates intermediate output you won't need again.
+- **Compact with hints** — `pre-compact.js` reads `Focus.md` and git context to guide compaction.
+- **Handoff for transitions** — `/handoff` creates structured summaries before `/clear` or rewind.
+
+| Situation | Action |
+|-----------|--------|
+| New task | `/clear` (session hooks reload context from Obsidian) |
+| Wrong approach | Rewind (`Esc Esc`), use `/handoff` first to document what failed |
+| Stale context | `/compact` with hint, or let `pre-compact.js` provide one |
+| Lots of intermediate output | Delegate to subagent |
+
+### Focus.md
+
+Create `Development/<project>/Focus.md` in your Obsidian vault with a single line describing your current task focus. This file is:
+- Loaded first at session start (highest priority)
+- Read by `pre-compact.js` to guide compaction summaries
+
+Example content:
+```
+Implementing OAuth flow for the billing integration
+```
+
 ## License
 
 MIT
@@ -237,4 +265,6 @@ MIT
 
 Built on [Claude Code](https://claude.ai/code) by [Anthropic](https://anthropic.com).
 
-Session persistence hooks inspired by [Andrej Karpathy's Claude Code setup](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+**References:**
+- [Claude Code: Session Management and 1M Context](https://claude.com/blog/using-claude-code-session-management-and-1m-context) — Anthropic's guide to context rot, compaction, rewind, and subagents
+- [Andrej Karpathy's Claude Code setup](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — Inspiration for session persistence hooks
