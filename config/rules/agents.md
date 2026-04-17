@@ -2,19 +2,25 @@
 
 ## Available Agents
 
-Located in `~/.claude/agents/`:
+Located in `~/.claude/agents/`. Each agent pins a model in its frontmatter matched to task complexity — see `performance.md` for the tiering rationale.
 
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| planner | Implementation planning | Complex features, refactoring |
-| architect | System design | Architectural decisions |
-| tdd-guide | Test-driven development | New features, bug fixes |
-| code-reviewer | Code review | After writing code |
-| security-reviewer | Security analysis | Before commits |
-| build-error-resolver | Fix build errors | When build fails |
-| e2e-runner | E2E testing | Critical user flows |
-| refactor-cleaner | Dead code cleanup | Code maintenance |
-| doc-updater | Documentation | Updating docs |
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| planner | Opus | Implementation planning | Complex features, refactoring |
+| architect | Opus | System design | Architectural decisions |
+| security-reviewer | Opus | Security analysis | Before commits; user input / auth / sensitive data |
+| function-analyzer | Opus | Per-function deep analysis | Security audit context building |
+| code-reviewer | Sonnet | Code review | After writing code |
+| database-reviewer | Sonnet | PostgreSQL review | SQL / schema / migration work |
+| tdd-guide | Sonnet | Test-driven development | New features, bug fixes |
+| semgrep-triager | Sonnet | Classify semgrep findings | After semgrep-scanner runs |
+| build-error-resolver | Haiku | Fix build errors | When build fails |
+| refactor-cleaner | Haiku | Dead code cleanup | Code maintenance |
+| doc-updater | Haiku | Documentation | Updating docs / codemaps |
+| e2e-runner | Haiku | E2E testing | Critical user flows |
+| semgrep-scanner | Haiku | Run semgrep scans | Static analysis |
+
+Override per-call by passing a `model:` param at invocation if an agent needs to be bumped up for a specific task.
 
 ## Immediate Agent Usage
 

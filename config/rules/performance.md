@@ -17,6 +17,16 @@
 - Maximum reasoning requirements
 - Research and analysis tasks
 
+### How this is applied
+
+Models are pinned per-agent in each `.md` frontmatter (e.g. `model: sonnet`). Current tiering:
+
+- **Opus** — architect, planner, security-reviewer, function-analyzer
+- **Sonnet** — code-reviewer, database-reviewer, tdd-guide, semgrep-triager
+- **Haiku** — build-error-resolver, doc-updater, e2e-runner, refactor-cleaner, semgrep-scanner
+
+Precedence order (per [Claude Code docs](https://code.claude.com/docs/en/agents.md#choose-a-model)): `CLAUDE_CODE_SUBAGENT_MODEL` env var → per-call `model:` param → agent frontmatter → parent session model. Claude Code does NOT auto-downgrade subagents to cheaper models — tiering is explicit via frontmatter.
+
 ## Context Window Management
 
 Avoid last 20% of context window for:

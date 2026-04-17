@@ -31,23 +31,23 @@ Installed to `~/.claude/` by setup scripts. Most files are copied (not symlinked
 
 ### Agents (`agents/`)
 
-13 agent definitions installed to `~/.claude/agents/`. These are markdown prompts that define specialized Claude Code behaviors.
+13 agent definitions installed to `~/.claude/agents/`. These are markdown prompts that define specialized Claude Code behaviors. Each agent pins a model in its frontmatter matched to task complexity — see `config/rules/performance.md` for the tiering rationale.
 
 | Agent | Purpose | Model |
 |-------|---------|-------|
-| planner | Implementation planning | Opus (deep reasoning) |
-| architect | System design decisions | Default |
-| code-reviewer | Code quality review | Default |
-| tdd-guide | Test-driven development | Default |
-| security-reviewer | Security analysis | Default |
-| build-error-resolver | Fix build/type errors | Default |
-| e2e-runner | End-to-end testing | Default |
-| refactor-cleaner | Dead code cleanup | Default |
-| doc-updater | Documentation updates | Default |
-| database-reviewer | SQL/schema review | Default |
-| function-analyzer | Deep function analysis | Default |
-| semgrep-scanner | Static analysis scans | Default |
-| semgrep-triager | Triage scan findings | Default |
+| planner | Implementation planning | Opus |
+| architect | System design decisions | Opus |
+| security-reviewer | Security analysis | Opus |
+| function-analyzer | Deep function analysis | Opus |
+| code-reviewer | Code quality review | Sonnet |
+| database-reviewer | SQL/schema review | Sonnet |
+| tdd-guide | Test-driven development | Sonnet |
+| semgrep-triager | Triage scan findings | Sonnet |
+| build-error-resolver | Fix build/type errors | Haiku |
+| refactor-cleaner | Dead code cleanup | Haiku |
+| doc-updater | Documentation updates | Haiku |
+| e2e-runner | End-to-end testing | Haiku |
+| semgrep-scanner | Static analysis scans | Haiku |
 
 ### Skills (`skills/`)
 

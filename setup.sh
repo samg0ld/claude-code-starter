@@ -14,14 +14,44 @@ echo ""
 # Create directories
 mkdir -p "$CLAUDE_DIR"/{agents,rules,commands,contexts,scripts/hooks,scripts/lib,skills}
 
-# Agents
-if [ -d "$SCRIPT_DIR/agents" ]; then
-  for src in "$SCRIPT_DIR/agents/"*.md; do
-    dst="$CLAUDE_DIR/agents/$(basename "$src")"
+# sync_dir <src_dir> <dst_dir> <glob>
+# Copies files newer than dst (or all with FORCE=1), and removes files in dst
+# that no longer exist in src (the repo is source of truth). Set NO_PRUNE=1 to
+# keep stale files (e.g. if you have local-only commands you manage by hand).
+sync_dir() {
+  local src_dir="$1"
+  local dst_dir="$2"
+  local glob="$3"
+  [ -d "$src_dir" ] || return 0
+  mkdir -p "$dst_dir"
+
+  local had_nullglob=0
+  shopt -q nullglob && had_nullglob=1
+  shopt -s nullglob
+
+  for src in "$src_dir"/$glob; do
+    local dst="$dst_dir/$(basename "$src")"
     if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
       cp "$src" "$dst"
     fi
   done
+
+  if [ "${NO_PRUNE:-}" != "1" ]; then
+    for dst in "$dst_dir"/$glob; do
+      local src="$src_dir/$(basename "$dst")"
+      if [ ! -f "$src" ]; then
+        rm "$dst"
+        echo "    Pruned stale: $(basename "$dst")"
+      fi
+    done
+  fi
+
+  [ "$had_nullglob" = "0" ] && shopt -u nullglob
+}
+
+# Agents
+if [ -d "$SCRIPT_DIR/agents" ]; then
+  sync_dir "$SCRIPT_DIR/agents" "$CLAUDE_DIR/agents" "*.md"
   echo "  Installed $(ls "$SCRIPT_DIR/agents/"*.md | wc -l | tr -d ' ') agents"
 fi
 
@@ -62,51 +92,26 @@ fi
 
 # Rules
 if [ -d "$SCRIPT_DIR/config/rules" ]; then
-  for src in "$SCRIPT_DIR/config/rules/"*.md; do
-    dst="$CLAUDE_DIR/rules/$(basename "$src")"
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
-      cp "$src" "$dst"
-    fi
-  done
+  sync_dir "$SCRIPT_DIR/config/rules" "$CLAUDE_DIR/rules" "*.md"
   echo "  Installed $(ls "$SCRIPT_DIR/config/rules/"*.md | wc -l | tr -d ' ') rules"
 fi
 
 # Commands
 if [ -d "$SCRIPT_DIR/config/commands" ]; then
-  for src in "$SCRIPT_DIR/config/commands/"*.md; do
-    dst="$CLAUDE_DIR/commands/$(basename "$src")"
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
-      cp "$src" "$dst"
-    fi
-  done
+  sync_dir "$SCRIPT_DIR/config/commands" "$CLAUDE_DIR/commands" "*.md"
   echo "  Installed $(ls "$SCRIPT_DIR/config/commands/"*.md | wc -l | tr -d ' ') commands"
 fi
 
 # Contexts
 if [ -d "$SCRIPT_DIR/config/contexts" ]; then
-  for src in "$SCRIPT_DIR/config/contexts/"*.md; do
-    dst="$CLAUDE_DIR/contexts/$(basename "$src")"
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
-      cp "$src" "$dst"
-    fi
-  done
+  sync_dir "$SCRIPT_DIR/config/contexts" "$CLAUDE_DIR/contexts" "*.md"
   echo "  Installed $(ls "$SCRIPT_DIR/config/contexts/"*.md | wc -l | tr -d ' ') contexts"
 fi
 
 # Scripts/hooks
 if [ -d "$SCRIPT_DIR/config/scripts" ]; then
-  for src in "$SCRIPT_DIR/config/scripts/hooks/"*.js; do
-    dst="$CLAUDE_DIR/scripts/hooks/$(basename "$src")"
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
-      cp "$src" "$dst"
-    fi
-  done
-  for src in "$SCRIPT_DIR/config/scripts/lib/"*.js; do
-    dst="$CLAUDE_DIR/scripts/lib/$(basename "$src")"
-    if [ ! -f "$dst" ] || [ "$src" -nt "$dst" ] || [ "${FORCE:-}" = "1" ]; then
-      cp "$src" "$dst"
-    fi
-  done
+  sync_dir "$SCRIPT_DIR/config/scripts/hooks" "$CLAUDE_DIR/scripts/hooks" "*.js"
+  sync_dir "$SCRIPT_DIR/config/scripts/lib" "$CLAUDE_DIR/scripts/lib" "*.js"
   # Standalone scripts (health check, etc.)
   [ -f "$SCRIPT_DIR/config/scripts/check-mcp-health.js" ] && cp "$SCRIPT_DIR/config/scripts/check-mcp-health.js" "$CLAUDE_DIR/scripts/"
   echo "  Installed hook scripts"
@@ -148,3 +153,4 @@ echo "  - MCP servers: run 'claude mcp add <name>' for each server"
 echo "  - Credentials: copy .env with real API keys"
 echo ""
 echo "Tip: Re-run with FORCE=1 to overwrite all files regardless of timestamps"
+echo "     Re-run with NO_PRUNE=1 to keep files in ~/.claude/ that aren't in this repo"

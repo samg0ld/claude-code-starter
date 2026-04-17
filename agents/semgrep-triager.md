@@ -2,6 +2,7 @@
 name: semgrep-triager
 description: "Classifies semgrep scan findings as true or false positives by reading source context. Use when triaging static analysis results to separate real vulnerabilities from noise."
 tools: Read, Grep, Glob, Write
+model: sonnet
 ---
 
 # Semgrep Triage Agent

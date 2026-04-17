@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
 $Force = $args -contains "-Force"
+$NoPrune = $args -contains "-NoPrune"
 
 Write-Host "Installing Claude Code configuration from $ScriptDir"
 Write-Host "Target: $ClaudeDir"
@@ -17,14 +18,34 @@ foreach ($dir in $dirs) {
     New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeDir $dir) | Out-Null
 }
 
-# Agents
-if (Test-Path "$ScriptDir\agents") {
-    Get-ChildItem "$ScriptDir\agents\*.md" | ForEach-Object {
-        $dst = Join-Path $ClaudeDir "agents\$($_.Name)"
+# Sync-Dir: copy newer files from src->dst, and prune files in dst that aren't
+# in src (the repo is source of truth). Use -NoPrune to keep local-only files.
+function Sync-Dir {
+    param($SrcDir, $DstDir, $Glob)
+    if (-not (Test-Path $SrcDir)) { return }
+    New-Item -ItemType Directory -Force -Path $DstDir | Out-Null
+
+    Get-ChildItem (Join-Path $SrcDir $Glob) -ErrorAction SilentlyContinue | ForEach-Object {
+        $dst = Join-Path $DstDir $_.Name
         if ($Force -or -not (Test-Path $dst) -or $_.LastWriteTime -gt (Get-Item $dst).LastWriteTime) {
             Copy-Item $_.FullName $dst -Force
         }
     }
+
+    if (-not $NoPrune) {
+        Get-ChildItem (Join-Path $DstDir $Glob) -ErrorAction SilentlyContinue | ForEach-Object {
+            $src = Join-Path $SrcDir $_.Name
+            if (-not (Test-Path $src)) {
+                Remove-Item $_.FullName -Force
+                Write-Host "    Pruned stale: $($_.Name)"
+            }
+        }
+    }
+}
+
+# Agents
+if (Test-Path "$ScriptDir\agents") {
+    Sync-Dir "$ScriptDir\agents" (Join-Path $ClaudeDir "agents") "*.md"
     $count = (Get-ChildItem "$ScriptDir\agents\*.md").Count
     Write-Host "  Installed $count agents"
 }
@@ -66,42 +87,31 @@ if (Test-Path $learnedTarget) {
     Write-Host "  Skipped learned skills (config\skills\learned\ not found - will be created on first /learn)"
 }
 
-# Helper: copy if newer (or if -Force)
-function Copy-IfNewer {
-    param($SrcPattern, $DstDir)
-    Get-ChildItem $SrcPattern | ForEach-Object {
-        $dst = Join-Path $DstDir $_.Name
-        if ($Force -or -not (Test-Path $dst) -or $_.LastWriteTime -gt (Get-Item $dst).LastWriteTime) {
-            Copy-Item $_.FullName $dst -Force
-        }
-    }
-}
-
 # Rules
 if (Test-Path "$ScriptDir\config\rules") {
-    Copy-IfNewer "$ScriptDir\config\rules\*.md" (Join-Path $ClaudeDir "rules")
+    Sync-Dir "$ScriptDir\config\rules" (Join-Path $ClaudeDir "rules") "*.md"
     $count = (Get-ChildItem "$ScriptDir\config\rules\*.md").Count
     Write-Host "  Installed $count rules"
 }
 
 # Commands
 if (Test-Path "$ScriptDir\config\commands") {
-    Copy-IfNewer "$ScriptDir\config\commands\*.md" (Join-Path $ClaudeDir "commands")
+    Sync-Dir "$ScriptDir\config\commands" (Join-Path $ClaudeDir "commands") "*.md"
     $count = (Get-ChildItem "$ScriptDir\config\commands\*.md").Count
     Write-Host "  Installed $count commands"
 }
 
 # Contexts
 if (Test-Path "$ScriptDir\config\contexts") {
-    Copy-IfNewer "$ScriptDir\config\contexts\*.md" (Join-Path $ClaudeDir "contexts")
+    Sync-Dir "$ScriptDir\config\contexts" (Join-Path $ClaudeDir "contexts") "*.md"
     $count = (Get-ChildItem "$ScriptDir\config\contexts\*.md").Count
     Write-Host "  Installed $count contexts"
 }
 
 # Scripts/hooks
 if (Test-Path "$ScriptDir\config\scripts") {
-    Copy-IfNewer "$ScriptDir\config\scripts\hooks\*.js" (Join-Path $ClaudeDir "scripts\hooks")
-    Copy-IfNewer "$ScriptDir\config\scripts\lib\*.js" (Join-Path $ClaudeDir "scripts\lib")
+    Sync-Dir "$ScriptDir\config\scripts\hooks" (Join-Path $ClaudeDir "scripts\hooks") "*.js"
+    Sync-Dir "$ScriptDir\config\scripts\lib" (Join-Path $ClaudeDir "scripts\lib") "*.js"
     # Standalone scripts (health check, etc.)
     if (Test-Path "$ScriptDir\config\scripts\check-mcp-health.js") {
         Copy-Item "$ScriptDir\config\scripts\check-mcp-health.js" (Join-Path $ClaudeDir "scripts\check-mcp-health.js") -Force
@@ -149,3 +159,4 @@ Write-Host "  - MCP servers: run 'claude mcp add <name>' for each server"
 Write-Host "  - Credentials: copy .env with real API keys"
 Write-Host ""
 Write-Host "Tip: Re-run with -Force to overwrite all files regardless of timestamps"
+Write-Host "     Re-run with -NoPrune to keep files in ~\.claude\ that aren't in this repo"

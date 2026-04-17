@@ -2,6 +2,7 @@
 name: function-analyzer
 description: "Performs ultra-granular per-function deep analysis for security audit context building. Use when analyzing dense functions, data-flow chains, cryptographic implementations, or state machines."
 tools: Read, Grep, Glob
+model: opus
 ---
 
 # Function Analyzer Agent
