@@ -252,6 +252,8 @@ Implementing OAuth flow for the billing integration
 
 MIT
 
+Maintained by [@SamG0ld](https://github.com/SamG0ld)
+
 ## Prerequisites
 
 | Dependency | Required | What needs it |
