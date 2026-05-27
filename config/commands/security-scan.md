@@ -110,7 +110,7 @@ Tools: [list available tools] (Tier N, ~XX% coverage)
 ### 1a. Regex Pattern Scan (Always Runs)
 
 Load patterns from the `security-regex-patterns.json` data file (located in
-`config/data/` in this repo).
+`config/data/` in this repo, installed to `~/.claude/data/`).
 
 For each file in scope:
 1. Read the file content
