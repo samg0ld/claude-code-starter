@@ -7,15 +7,56 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
 $Force = $args -contains "-Force"
 $NoPrune = $args -contains "-NoPrune"
+$DryRun = $args -contains "-DryRun"
+
+if ($DryRun) {
+    Write-Host "DRY-RUN MODE -- no files will be written, no symlinks created."
+    Write-Host "Re-run without -DryRun to actually apply."
+    Write-Host ""
+}
 
 Write-Host "Installing Claude Code configuration from $ScriptDir"
 Write-Host "Target: $ClaudeDir"
 Write-Host ""
 
+# Symlink capability probe -- runs ONCE, before any file is touched.
+# Uses cmd's mklink, which honors Windows Developer Mode (unprivileged symlink
+# creation flag). PowerShell's New-Item -SymbolicLink does NOT use that flag
+# and demands admin even when Dev Mode is on, so it is unsuitable here.
+# If the probe fails, the symlink helper will skip without removing originals.
+$script:CanSymlink = $false
+$probeTarget = Join-Path $env:TEMP "claude-starter-symlink-probe-target.txt"
+$probeLink = Join-Path $env:TEMP "claude-starter-symlink-probe-link.txt"
+try {
+    if (Test-Path $probeLink) { Remove-Item $probeLink -Force -ErrorAction SilentlyContinue }
+    "probe" | Out-File $probeTarget -Encoding ascii -Force
+    $mklinkOut = cmd /c "mklink `"$probeLink`" `"$probeTarget`"" 2>&1
+    if ($LASTEXITCODE -eq 0 -and (Test-Path $probeLink)) {
+        $script:CanSymlink = $true
+        Remove-Item $probeLink -Force -ErrorAction SilentlyContinue
+        Remove-Item $probeTarget -Force -ErrorAction SilentlyContinue
+        Write-Host "  Symlink capability: OK"
+    } else {
+        throw ($mklinkOut | Out-String).Trim()
+    }
+} catch {
+    if (Test-Path $probeTarget) { Remove-Item $probeTarget -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $probeLink) { Remove-Item $probeLink -Force -ErrorAction SilentlyContinue }
+    Write-Host "  Symlink capability: UNAVAILABLE ($($_.Exception.Message.Trim()))"
+    Write-Host "    CLAUDE.md and dev-layer files will be left in place. Enable Developer Mode at"
+    Write-Host "    Settings > Privacy & Security > For developers, then re-run setup.ps1."
+}
+Write-Host ""
+
 # Create directories
 $dirs = @("agents", "rules", "commands", "contexts", "scripts\hooks", "scripts\lib", "skills")
 foreach ($dir in $dirs) {
-    New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeDir $dir) | Out-Null
+    $p = Join-Path $ClaudeDir $dir
+    if ($DryRun) {
+        if (-not (Test-Path $p)) { Write-Host "  WOULD create dir: $p" }
+    } else {
+        New-Item -ItemType Directory -Force -Path $p | Out-Null
+    }
 }
 
 # Sync-Dir: copy newer files from src->dst, and prune files in dst that aren't
@@ -23,12 +64,18 @@ foreach ($dir in $dirs) {
 function Sync-Dir {
     param($SrcDir, $DstDir, $Glob)
     if (-not (Test-Path $SrcDir)) { return }
-    New-Item -ItemType Directory -Force -Path $DstDir | Out-Null
+    if (-not $DryRun) {
+        New-Item -ItemType Directory -Force -Path $DstDir | Out-Null
+    }
 
     Get-ChildItem (Join-Path $SrcDir $Glob) -ErrorAction SilentlyContinue | ForEach-Object {
         $dst = Join-Path $DstDir $_.Name
         if ($Force -or -not (Test-Path $dst) -or $_.LastWriteTime -gt (Get-Item $dst).LastWriteTime) {
-            Copy-Item $_.FullName $dst -Force
+            if ($DryRun) {
+                Write-Host "    WOULD copy: $($_.Name) -> $dst"
+            } else {
+                Copy-Item $_.FullName $dst -Force
+            }
         }
     }
 
@@ -36,8 +83,12 @@ function Sync-Dir {
         Get-ChildItem (Join-Path $DstDir $Glob) -ErrorAction SilentlyContinue | ForEach-Object {
             $src = Join-Path $SrcDir $_.Name
             if (-not (Test-Path $src)) {
-                Remove-Item $_.FullName -Force
-                Write-Host "    Pruned stale: $($_.Name)"
+                if ($DryRun) {
+                    Write-Host "    WOULD prune stale: $($_.Name)"
+                } else {
+                    Remove-Item $_.FullName -Force
+                    Write-Host "    Pruned stale: $($_.Name)"
+                }
             }
         }
     }
@@ -58,14 +109,15 @@ if (Test-Path "$ScriptDir\skills") {
     Write-Host "  Installed skills"
 }
 
-# Learned skills — junction so /learn saves to the repo and syncs across machines
+# Learned skills -- junction so /learn saves to the repo and syncs across machines
 $learnedTarget = Join-Path $ScriptDir "config\skills\learned"
 $learnedLink = Join-Path $ClaudeDir "skills\learned"
 if (Test-Path $learnedTarget) {
     if (Test-Path $learnedLink) {
         $item = Get-Item $learnedLink -Force
         if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-            $existingTarget = ($item | Select-Object -ExpandProperty Target)[0]
+            # In PS5.1, .Target is a string (not array) -- Select-Object -First 1 works for both
+            $existingTarget = $item.Target | Select-Object -First 1
             if ($existingTarget -eq $learnedTarget) {
                 Write-Host "  Learned skills junction already exists"
             } else {
@@ -108,9 +160,10 @@ if (Test-Path "$ScriptDir\config\contexts") {
     Write-Host "  Installed $count contexts"
 }
 
-# Scripts/hooks
+# Scripts/hooks (js + py)
 if (Test-Path "$ScriptDir\config\scripts") {
     Sync-Dir "$ScriptDir\config\scripts\hooks" (Join-Path $ClaudeDir "scripts\hooks") "*.js"
+    Sync-Dir "$ScriptDir\config\scripts\hooks" (Join-Path $ClaudeDir "scripts\hooks") "*.py"
     Sync-Dir "$ScriptDir\config\scripts\lib" (Join-Path $ClaudeDir "scripts\lib") "*.js"
     # Standalone scripts (health check, etc.)
     if (Test-Path "$ScriptDir\config\scripts\check-mcp-health.js") {
@@ -132,31 +185,119 @@ if (Test-Path "$ScriptDir\config\statusline.js") {
     Write-Host "  Installed statusline.js"
 }
 
-# Settings — substitute $HOME with actual home dir, only copy if not present
-$settingsPath = Join-Path $ClaudeDir "settings.json"
-if (-not (Test-Path $settingsPath)) {
-    $content = Get-Content "$ScriptDir\config\settings.template.json" -Raw
-    $content = $content.Replace('$HOME', $env:USERPROFILE.Replace('\', '/'))
-    Set-Content -Path $settingsPath -Value $content -Encoding UTF8
-    Write-Host "  Installed settings.json (paths resolved to $env:USERPROFILE)"
+# Settings -- surgical merge of canonical hooks + statusLine into local settings.json
+# Preserves per-machine keys (model, enabledPlugins, voiceEnabled, extraKnownMarketplaces).
+if ($DryRun) {
+    & node "$ScriptDir\config\scripts\merge-hooks-settings.js" "$ScriptDir" "--dry-run" 2>&1 | Out-Host
 } else {
-    Write-Host "  Skipped settings.json (already exists - merge manually if needed)"
+    & node "$ScriptDir\config\scripts\merge-hooks-settings.js" "$ScriptDir" 2>&1 | Out-Host
 }
 
-$localSettingsPath = Join-Path $ClaudeDir "settings.local.json"
-if (-not (Test-Path $localSettingsPath)) {
-    Copy-Item "$ScriptDir\config\settings.local.json" $localSettingsPath
-    Write-Host "  Installed settings.local.json"
+# Symlink helper. Safety properties:
+#   1. If symlink capability is not available, skip without touching $LinkPath.
+#   2. Otherwise, create the symlink at a temp path FIRST; only after success
+#      do we back up or remove the original. Atomic rename completes the swap.
+function New-RepoSymlink {
+    param($LinkPath, $TargetPath, $Label)
+    if (-not (Test-Path $TargetPath)) {
+        Write-Host "  Skipped $Label symlink (source missing: $TargetPath)"
+        return
+    }
+
+    # SAFETY GATE: no capability -> do nothing destructive.
+    if (-not $script:CanSymlink) {
+        Write-Host "  Skipped $Label symlink (no symlink capability in this session)"
+        return
+    }
+
+    if (-not $DryRun) {
+        New-Item -ItemType Directory -Force -Path (Split-Path $LinkPath -Parent) | Out-Null
+    }
+
+    # If link already correctly in place, short-circuit.
+    if (Test-Path $LinkPath) {
+        $item = Get-Item $LinkPath -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            $existingTarget = $item.Target | Select-Object -First 1
+            if ($existingTarget -eq $TargetPath) {
+                Write-Host "  $Label symlink already in place"
+                return
+            }
+        }
+    }
+
+    if ($DryRun) {
+        Write-Host "  WOULD create $Label symlink -> $TargetPath"
+        return
+    }
+
+    # Create symlink at a temp sibling path FIRST. Only proceed if it works.
+    # Use cmd's mklink so Dev Mode (unprivileged-create flag) is honored.
+    $tempLink = "$LinkPath.symlinktmp-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    $mklinkOut = cmd /c "mklink `"$tempLink`" `"$TargetPath`"" 2>&1
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tempLink)) {
+        Write-Host "  FAILED to create $Label symlink (temp probe): $(($mklinkOut | Out-String).Trim())"
+        Write-Host "    Original file at $LinkPath was NOT touched."
+        if (Test-Path $tempLink) { Remove-Item $tempLink -Force -ErrorAction SilentlyContinue }
+        return
+    }
+
+    # Temp symlink exists. Now safe to deal with the original.
+    if (Test-Path $LinkPath) {
+        $item = Get-Item $LinkPath -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            Remove-Item $LinkPath -Force
+        } else {
+            # Regular file. ALWAYS back up (even if content matches repo) so
+            # the audit trail is preserved and recovery is always possible.
+            $backup = "$LinkPath.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+            Move-Item $LinkPath $backup -Force
+            Write-Host "  Backed up local $Label to $(Split-Path $backup -Leaf)"
+        }
+    }
+
+    # Final atomic swap.
+    Move-Item $tempLink $LinkPath -Force
+    Write-Host "  Created $Label symlink -> $TargetPath"
+}
+
+# DEV_ROOT is where your project repos live. Defaults to the parent of this repo
+# (e.g. C:\Dev when this clone is at C:\Dev\claude-code-starter). Override with
+# $env:DEV_ROOT to point dev-layer symlinks elsewhere.
+$DevRoot = if ($env:DEV_ROOT) { $env:DEV_ROOT } else { Split-Path -Parent $ScriptDir }
+
+# Global CLAUDE.md symlink
+New-RepoSymlink `
+    -LinkPath (Join-Path $ClaudeDir "CLAUDE.md") `
+    -TargetPath (Join-Path $ScriptDir "config\CLAUDE.md") `
+    -Label "global CLAUDE.md"
+
+if (Test-Path $DevRoot) {
+    # Dev-layer CLAUDE.md symlink
+    New-RepoSymlink `
+        -LinkPath (Join-Path $DevRoot "CLAUDE.md") `
+        -TargetPath (Join-Path $ScriptDir "dev\CLAUDE.md") `
+        -Label "Dev-layer CLAUDE.md"
+
+    # Dev-layer rules/hooks.md symlink
+    New-RepoSymlink `
+        -LinkPath (Join-Path $DevRoot ".claude\rules\hooks.md") `
+        -TargetPath (Join-Path $ScriptDir "dev\rules\hooks.md") `
+        -Label "Dev-layer rules/hooks.md"
 } else {
-    Write-Host "  Skipped settings.local.json (already exists)"
+    Write-Host "  Skipped dev-layer symlinks (DEV_ROOT does not exist: $DevRoot)"
 }
 
 Write-Host ""
 Write-Host "Done. Restart Claude Code to pick up changes."
 Write-Host ""
-Write-Host "Still needed:"
-Write-Host "  - MCP servers: run 'claude mcp add <name>' for each server"
-Write-Host "  - Credentials: copy .env with real API keys"
+Write-Host "Optional next steps:"
+Write-Host "  - Set OBSIDIAN_VAULT env var if you use Obsidian for session-knowledge tracking"
+Write-Host "  - Set CLAUDE_TIMEZONE env var (e.g., America/New_York) to override system timezone"
+Write-Host "  - Set CLAUDE_DEV_ROOT env var if your projects live outside ~/Dev"
+Write-Host "  - Add MCP servers: see examples\mcp-server-example.md"
 Write-Host ""
 Write-Host "Tip: Re-run with -Force to overwrite all files regardless of timestamps"
 Write-Host "     Re-run with -NoPrune to keep files in ~\.claude\ that aren't in this repo"
+Write-Host "     Re-run with -DryRun to preview changes without writing anything"
+Write-Host "     Set `$env:DEV_ROOT to override the dev-layer symlink target (default: parent of this repo)"
