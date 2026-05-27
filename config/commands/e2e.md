@@ -17,7 +17,7 @@ This command invokes the **e2e-runner** agent to generate, maintain, and execute
 ## When to Use
 
 Use `/e2e` when:
-- Testing critical user journeys (login, checkout, payments)
+- Testing critical user journeys (login, trading, payments)
 - Verifying multi-step flows work end-to-end
 - Testing UI interactions and navigation
 - Validating integration between frontend and backend
@@ -37,120 +37,120 @@ The e2e-runner agent will:
 ## Example Usage
 
 ```
-User: /e2e Test the product search and view flow
+User: /e2e Test the market search and view flow
 
 Agent (e2e-runner):
-# E2E Test Generation: Product Search and View Flow
+# E2E Test Generation: Market Search and View Flow
 
 ## Test Scenario Identified
 
-**User Journey:** Product Search → View Results → Click Product → View Details
+**User Journey:** Market Search → View Results → Click Market → View Details
 
 **Test Coverage:**
-1. Navigate to products page
-2. Perform search
+1. Navigate to markets page
+2. Perform semantic search
 3. Verify search results
 4. Click on first result
-5. Verify product details page loads
-6. Verify images render
+5. Verify market details page loads
+6. Verify chart renders
 
 ## Generated Test Code
 
 ```typescript
-// tests/e2e/products/search-and-view.spec.ts
+// tests/e2e/markets/search-and-view.spec.ts
 import { test, expect } from '@playwright/test'
-import { ProductsPage } from '../../pages/ProductsPage'
-import { ProductDetailsPage } from '../../pages/ProductDetailsPage'
+import { MarketsPage } from '../../pages/MarketsPage'
+import { MarketDetailsPage } from '../../pages/MarketDetailsPage'
 
-test.describe('Product Search and View Flow', () => {
-  test('user can search products and view details', async ({ page }) => {
-    // 1. Navigate to products page
-    const productsPage = new ProductsPage(page)
-    await productsPage.goto()
+test.describe('Market Search and View Flow', () => {
+  test('user can search markets and view details', async ({ page }) => {
+    // 1. Navigate to markets page
+    const marketsPage = new MarketsPage(page)
+    await marketsPage.goto()
 
     // Verify page loaded
-    await expect(page).toHaveTitle(/Products/)
-    await expect(page.locator('h1')).toContainText('Products')
+    await expect(page).toHaveTitle(/Markets/)
+    await expect(page.locator('h1')).toContainText('Markets')
 
-    // 2. Perform search
-    await productsPage.searchProducts('wireless')
+    // 2. Perform semantic search
+    await marketsPage.searchMarkets('election')
 
     // Wait for API response
     await page.waitForResponse(resp =>
-      resp.url().includes('/api/products/search') && resp.status() === 200
+      resp.url().includes('/api/markets/search') && resp.status() === 200
     )
 
     // 3. Verify search results
-    const productCards = productsPage.productCards
-    await expect(productCards.first()).toBeVisible()
-    const resultCount = await productCards.count()
+    const marketCards = marketsPage.marketCards
+    await expect(marketCards.first()).toBeVisible()
+    const resultCount = await marketCards.count()
     expect(resultCount).toBeGreaterThan(0)
 
     // Take screenshot of search results
     await page.screenshot({ path: 'artifacts/search-results.png' })
 
     // 4. Click on first result
-    const firstProductTitle = await productCards.first().textContent()
-    await productCards.first().click()
+    const firstMarketTitle = await marketCards.first().textContent()
+    await marketCards.first().click()
 
-    // 5. Verify product details page loads
-    await expect(page).toHaveURL(/\/products\/[a-z0-9-]+/)
+    // 5. Verify market details page loads
+    await expect(page).toHaveURL(/\/markets\/[a-z0-9-]+/)
 
-    const detailsPage = new ProductDetailsPage(page)
-    await expect(detailsPage.productName).toBeVisible()
-    await expect(detailsPage.productDescription).toBeVisible()
+    const detailsPage = new MarketDetailsPage(page)
+    await expect(detailsPage.marketName).toBeVisible()
+    await expect(detailsPage.marketDescription).toBeVisible()
 
-    // 6. Verify images render
-    await expect(detailsPage.productImage).toBeVisible()
+    // 6. Verify chart renders
+    await expect(detailsPage.priceChart).toBeVisible()
 
-    // Verify product name matches
-    const detailsTitle = await detailsPage.productName.textContent()
+    // Verify market name matches
+    const detailsTitle = await detailsPage.marketName.textContent()
     expect(detailsTitle?.toLowerCase()).toContain(
-      firstProductTitle?.toLowerCase().substring(0, 20) || ''
+      firstMarketTitle?.toLowerCase().substring(0, 20) || ''
     )
 
-    // Take screenshot of product details
-    await page.screenshot({ path: 'artifacts/product-details.png' })
+    // Take screenshot of market details
+    await page.screenshot({ path: 'artifacts/market-details.png' })
   })
 
   test('search with no results shows empty state', async ({ page }) => {
-    const productsPage = new ProductsPage(page)
-    await productsPage.goto()
+    const marketsPage = new MarketsPage(page)
+    await marketsPage.goto()
 
-    // Search for non-existent product
-    await productsPage.searchProducts('xyznonexistent123456')
+    // Search for non-existent market
+    await marketsPage.searchMarkets('xyznonexistentmarket123456')
 
     // Verify empty state
     await expect(page.locator('[data-testid="no-results"]')).toBeVisible()
     await expect(page.locator('[data-testid="no-results"]')).toContainText(
-      /no.*results|no.*products/i
+      /no.*results|no.*markets/i
     )
 
-    const productCount = await productsPage.productCards.count()
-    expect(productCount).toBe(0)
+    const marketCount = await marketsPage.marketCards.count()
+    expect(marketCount).toBe(0)
   })
 
-  test('can clear search and see all products again', async ({ page }) => {
-    const productsPage = new ProductsPage(page)
-    await productsPage.goto()
+  test('can clear search and see all markets again', async ({ page }) => {
+    const marketsPage = new MarketsPage(page)
+    await marketsPage.goto()
 
-    // Initial product count
-    const initialCount = await productsPage.productCards.count()
+    // Initial market count
+    const initialCount = await marketsPage.marketCards.count()
 
     // Perform search
-    await productsPage.searchProducts('wireless')
+    await marketsPage.searchMarkets('trump')
     await page.waitForLoadState('networkidle')
 
     // Verify filtered results
-    const filteredCount = await productsPage.productCards.count()
+    const filteredCount = await marketsPage.marketCards.count()
     expect(filteredCount).toBeLessThan(initialCount)
 
     // Clear search
-    await productsPage.searchInput.clear()
+    await marketsPage.searchInput.clear()
     await page.waitForLoadState('networkidle')
 
-    // Verify all products shown again
-    const finalCount = await productsPage.productCards.count()
+    // Verify all markets shown again
+    const finalCount = await marketsPage.marketCards.count()
     expect(finalCount).toBe(initialCount)
   })
 })
@@ -281,24 +281,25 @@ Add to your CI pipeline:
     path: playwright-report/
 ```
 
-## Example Critical Flows
+## PMX-Specific Critical Flows
 
-Prioritize E2E tests for your app's most critical paths:
+For PMX, prioritize these E2E tests:
 
 **🔴 CRITICAL (Must Always Pass):**
-1. User can sign up and log in
-2. User can browse products/content
-3. User can search and filter
-4. User can view details
-5. User can complete checkout/action
-6. User can manage account settings
+1. User can connect wallet
+2. User can browse markets
+3. User can search markets (semantic search)
+4. User can view market details
+5. User can place trade (with test funds)
+6. Market resolves correctly
+7. User can withdraw funds
 
 **🟡 IMPORTANT:**
-1. Content creation flow (admin)
+1. Market creation flow
 2. User profile updates
-3. Notification delivery
-4. Data export
-5. Filter and sort
+3. Real-time price updates
+4. Chart rendering
+5. Filter and sort markets
 6. Mobile responsive layout
 
 ## Best Practices
@@ -321,11 +322,11 @@ Prioritize E2E tests for your app's most critical paths:
 
 ## Important Notes
 
-**For apps handling payments:**
-- E2E tests involving payments MUST run on test/staging only
-- Never run payment tests against production
+**CRITICAL for PMX:**
+- E2E tests involving real money MUST run on testnet/staging only
+- Never run trading tests against production
 - Set `test.skip(process.env.NODE_ENV === 'production')` for financial tests
-- Use test credentials with sandbox accounts only
+- Use test wallets with small test funds only
 
 ## Integration with Other Commands
 

@@ -123,29 +123,39 @@ For each category, check:
     - Are alerts configured?
 ```
 
-### 3. Application-Specific Security Checks
+### 3. Example Project-Specific Security Checks
 
-**When the platform handles payments or sensitive data:**
+**CRITICAL - Platform Handles Real Money:**
 
 ```
 Financial Security:
-- [ ] All transactions are atomic (no partial state)
-- [ ] Balance/inventory checks before any operation
+- [ ] All market trades are atomic transactions
+- [ ] Balance checks before any withdrawal/trade
 - [ ] Rate limiting on all financial endpoints
 - [ ] Audit logging for all money movements
 - [ ] Double-entry bookkeeping validation
-- [ ] No floating-point arithmetic for money (use integers/cents)
+- [ ] Transaction signatures verified
+- [ ] No floating-point arithmetic for money
+
+Solana/Blockchain Security:
+- [ ] Wallet signatures properly validated
+- [ ] Transaction instructions verified before sending
+- [ ] Private keys never logged or stored
+- [ ] RPC endpoints rate limited
+- [ ] Slippage protection on all trades
+- [ ] MEV protection considerations
+- [ ] Malicious instruction detection
 
 Authentication Security:
-- [ ] Auth provider properly configured (OAuth, JWT, etc.)
+- [ ] Privy authentication properly implemented
 - [ ] JWT tokens validated on every request
-- [ ] Session management secure (HttpOnly, Secure, SameSite)
+- [ ] Session management secure
 - [ ] No authentication bypass paths
+- [ ] Wallet signature verification
 - [ ] Rate limiting on auth endpoints
-- [ ] Password reset flow is secure
 
-Database Security:
-- [ ] Row Level Security or equivalent access control enabled
+Database Security (Supabase):
+- [ ] Row Level Security (RLS) enabled on all tables
 - [ ] No direct database access from client
 - [ ] Parameterized queries only
 - [ ] No PII in logs
@@ -160,12 +170,13 @@ API Security:
 - [ ] No sensitive data in URLs
 - [ ] Proper HTTP methods (GET safe, POST/PUT/DELETE idempotent)
 
-External Service Security:
-- [ ] All external connections use TLS
-- [ ] API keys are server-side only
-- [ ] User input sanitized before sending to external APIs
-- [ ] No PII sent to third-party services unnecessarily
-- [ ] Rate limiting on external API calls
+Search Security (Redis + OpenAI):
+- [ ] Redis connection uses TLS
+- [ ] OpenAI API key server-side only
+- [ ] Search queries sanitized
+- [ ] No PII sent to OpenAI
+- [ ] Rate limiting on search endpoints
+- [ ] Redis AUTH enabled
 ```
 
 ## Vulnerability Patterns to Detect
@@ -192,8 +203,8 @@ if (!apiKey) {
 const query = `SELECT * FROM users WHERE id = ${userId}`
 await db.query(query)
 
-// ✅ CORRECT: Parameterized queries (ORM/query builder)
-const { data } = await db
+// ✅ CORRECT: Parameterized queries
+const { data } = await supabase
   .from('users')
   .select('*')
   .eq('id', userId)
@@ -531,4 +542,4 @@ After security review:
 
 ---
 
-**Remember**: Security is not optional. One vulnerability can expose user data or cause financial losses. Be thorough, be paranoid, be proactive.
+**Remember**: Security is not optional, especially for platforms handling real money. One vulnerability can cost users real financial losses. Be thorough, be paranoid, be proactive.

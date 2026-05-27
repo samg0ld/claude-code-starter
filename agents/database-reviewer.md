@@ -296,7 +296,7 @@ CREATE POLICY orders_user_policy ON orders
   FOR ALL
   USING (user_id = current_setting('app.current_user_id')::bigint);
 
--- RLS pattern
+-- Supabase pattern
 CREATE POLICY orders_user_policy ON orders
   FOR ALL
   TO authenticated

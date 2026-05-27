@@ -261,7 +261,7 @@ export const MyComponent = () => <div />
 export const someConstant = 42
 ```
 
-## Framework-Specific Build Issues
+## Example Project-Specific Build Issues
 
 ### Next.js 15 + React 19 Compatibility
 ```typescript
@@ -286,26 +286,30 @@ const Component = ({ children }: Props) => {
 }
 ```
 
-### ORM Client Types (Prisma/Drizzle)
+### Supabase Client Types
 ```typescript
 // ❌ ERROR: Type 'any' not assignable
-const products = await db.query.products.findMany()
+const { data } = await supabase
+  .from('markets')
+  .select('*')
 
 // ✅ FIX: Add type annotation
-interface Product {
+interface Market {
   id: string
   name: string
   slug: string
-  price: number
+  // ... other fields
 }
 
-const products: Product[] = await db.query.products.findMany()
+const { data } = await supabase
+  .from('markets')
+  .select('*') as { data: Market[] | null, error: any }
 ```
 
-### Redis Client Types
+### Redis Stack Types
 ```typescript
 // ❌ ERROR: Property 'ft' does not exist on type 'RedisClientType'
-const results = await client.ft.search('idx:products', query)
+const results = await client.ft.search('idx:markets', query)
 
 // ✅ FIX: Use proper Redis Stack types
 import { createClient } from 'redis'
@@ -317,17 +321,17 @@ const client = createClient({
 await client.connect()
 
 // Type is inferred correctly now
-const results = await client.ft.search('idx:products', query)
+const results = await client.ft.search('idx:markets', query)
 ```
 
-### Third-Party SDK Types
+### Solana Web3.js Types
 ```typescript
-// ❌ ERROR: Argument of type 'string' not assignable to expected type
-const result = sdk.doSomething(rawInput)
+// ❌ ERROR: Argument of type 'string' not assignable to 'PublicKey'
+const publicKey = wallet.address
 
-// ✅ FIX: Use SDK's type constructors
-import { SdkInput } from 'some-sdk'
-const result = sdk.doSomething(new SdkInput(rawInput))
+// ✅ FIX: Use PublicKey constructor
+import { PublicKey } from '@solana/web3.js'
+const publicKey = new PublicKey(wallet.address)
 ```
 
 ## Minimal Diff Strategy

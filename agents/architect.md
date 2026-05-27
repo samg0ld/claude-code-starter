@@ -108,31 +108,31 @@ For each design decision, document:
 For significant architectural decisions, create ADRs:
 
 ```markdown
-# ADR-001: Use Redis for Search Cache Layer
+# ADR-001: Use Redis for Semantic Search Vector Storage
 
 ## Context
-Need a fast caching layer for search queries and frequently accessed data.
+Need to store and query 1536-dimensional embeddings for semantic market search.
 
 ## Decision
-Use Redis as a read-through cache with TTL-based invalidation.
+Use Redis Stack with vector search capability.
 
 ## Consequences
 
 ### Positive
-- Sub-millisecond read latency (<1ms)
-- Built-in TTL for automatic cache expiration
-- Simple deployment and operations
-- Good performance up to 100K cached entries
+- Fast vector similarity search (<10ms)
+- Built-in KNN algorithm
+- Simple deployment
+- Good performance up to 100K vectors
 
 ### Negative
-- In-memory storage (cost scales with data size)
+- In-memory storage (expensive for large datasets)
 - Single point of failure without clustering
-- Cache invalidation complexity
+- Limited to cosine similarity
 
 ### Alternatives Considered
-- **Memcached**: Simpler, but fewer data structures
-- **CDN edge caching**: Better for static content, not dynamic queries
-- **Application-level cache**: No shared state across instances
+- **PostgreSQL pgvector**: Slower, but persistent storage
+- **Pinecone**: Managed service, higher cost
+- **Weaviate**: More features, more complex setup
 
 ## Status
 Accepted
@@ -183,24 +183,24 @@ Watch for these architectural anti-patterns:
 - **Tight Coupling**: Components too dependent
 - **God Object**: One class/component does everything
 
-## Example Architecture (SaaS Template)
+## Project-Specific Architecture (Example)
 
-Example architecture for a typical full-stack SaaS platform:
+Example architecture for an AI-powered SaaS platform:
 
 ### Current Architecture
-- **Frontend**: Next.js (Vercel)
-- **Backend**: Express or FastAPI (Cloud Run/Railway)
-- **Database**: PostgreSQL (managed)
+- **Frontend**: Next.js 15 (Vercel/Cloud Run)
+- **Backend**: FastAPI or Express (Cloud Run/Railway)
+- **Database**: PostgreSQL (Supabase)
 - **Cache**: Redis (Upstash/Railway)
 - **AI**: Claude API with structured output
-- **Auth**: OAuth 2.0 / JWT
+- **Real-time**: Supabase subscriptions
 
 ### Key Design Decisions
-1. **Edge Deployment**: CDN + edge functions for low latency
-2. **AI Integration**: Structured output with Zod/Pydantic for type safety
-3. **Immutable Patterns**: Spread operators for predictable state
-4. **Many Small Files**: High cohesion, low coupling
-5. **API-First**: All features accessible via REST/GraphQL
+1. **Hybrid Deployment**: Vercel (frontend) + Cloud Run (backend) for optimal performance
+2. **AI Integration**: Structured output with Pydantic/Zod for type safety
+3. **Real-time Updates**: Supabase subscriptions for live data
+4. **Immutable Patterns**: Spread operators for predictable state
+5. **Many Small Files**: High cohesion, low coupling
 
 ### Scalability Plan
 - **10K users**: Current architecture sufficient

@@ -127,24 +127,24 @@ Files to update:
 - Validate code snippets compile
 ```
 
-## Example Codemaps
+## Example Project-Specific Codemaps
 
 ### Frontend Codemap (docs/CODEMAPS/frontend.md)
 ```markdown
 # Frontend Architecture
 
 **Last Updated:** YYYY-MM-DD
-**Framework:** Next.js 15 (App Router)
-**Entry Point:** src/app/layout.tsx
+**Framework:** Next.js 15.1.4 (App Router)
+**Entry Point:** website/src/app/layout.tsx
 
 ## Structure
 
-src/
+website/src/
 ├── app/                # Next.js App Router
 │   ├── api/           # API routes
-│   ├── products/      # Product pages
-│   ├── dashboard/     # Dashboard
-│   └── settings/      # User settings
+│   ├── markets/       # Markets pages
+│   ├── bot/           # Bot interaction
+│   └── creator-dashboard/
 ├── components/        # React components
 ├── hooks/             # Custom hooks
 └── lib/               # Utilities
@@ -153,20 +153,20 @@ src/
 
 | Component | Purpose | Location |
 |-----------|---------|----------|
-| Navbar | Navigation & auth | components/Navbar.tsx |
-| ProductList | Product grid | app/products/ProductList.tsx |
-| SearchBar | Search UI | components/SearchBar.tsx |
+| HeaderWallet | Wallet connection | components/HeaderWallet.tsx |
+| MarketsClient | Markets listing | app/markets/MarketsClient.js |
+| SemanticSearchBar | Search UI | components/SemanticSearchBar.js |
 
 ## Data Flow
 
-User → Product Page → API Route → Database → Cache (optional) → Response
+User → Markets Page → API Route → Supabase → Redis (optional) → Response
 
 ## External Dependencies
 
-- Next.js 15 - Framework
-- React 19 - UI library
-- Auth provider - Authentication
-- Tailwind CSS - Styling
+- Next.js 15.1.4 - Framework
+- React 19.0.0 - UI library
+- Privy - Authentication
+- Tailwind CSS 3.4.1 - Styling
 ```
 
 ### Backend Codemap (docs/CODEMAPS/backend.md)
@@ -175,26 +175,26 @@ User → Product Page → API Route → Database → Cache (optional) → Respon
 
 **Last Updated:** YYYY-MM-DD
 **Runtime:** Next.js API Routes
-**Entry Point:** src/app/api/
+**Entry Point:** website/src/app/api/
 
 ## API Routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| /api/products | GET | List all products |
-| /api/products/search | GET | Search products |
-| /api/products/[slug] | GET | Single product |
-| /api/orders | POST | Create order |
+| /api/markets | GET | List all markets |
+| /api/markets/search | GET | Semantic search |
+| /api/market/[slug] | GET | Single market |
+| /api/market-price | GET | Real-time pricing |
 
 ## Data Flow
 
-API Route → Database Query → Cache (optional) → Response
+API Route → Supabase Query → Redis (cache) → Response
 
 ## External Services
 
-- PostgreSQL - Database
-- Redis - Caching
-- Stripe/Payment provider - Payments
+- Supabase - PostgreSQL database
+- Redis Stack - Vector search
+- OpenAI - Embeddings
 ```
 
 ### Integrations Codemap (docs/CODEMAPS/integrations.md)
@@ -203,20 +203,25 @@ API Route → Database Query → Cache (optional) → Response
 
 **Last Updated:** YYYY-MM-DD
 
-## Authentication
-- OAuth 2.0 / JWT
-- Email + password
+## Authentication (Privy)
+- Wallet connection (Solana, Ethereum)
+- Email authentication
 - Session management
 
-## Database
+## Database (Supabase)
 - PostgreSQL tables
-- Migrations (Prisma/Drizzle)
+- Real-time subscriptions
 - Row Level Security
 
-## Caching
-- Redis for query caching
-- CDN for static assets
-- TTL-based invalidation
+## Search (Redis + OpenAI)
+- Vector embeddings (text-embedding-ada-002)
+- Semantic search (KNN)
+- Fallback to substring search
+
+## Blockchain (Solana)
+- Wallet integration
+- Transaction handling
+- Meteora CP-AMM SDK
 ```
 
 ## README Update Template

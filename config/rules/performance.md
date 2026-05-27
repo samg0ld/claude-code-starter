@@ -2,17 +2,19 @@
 
 ## Model Selection Strategy
 
-**Haiku 4.5** (90% of Sonnet capability, 3x cost savings):
+Pick by tier, not version number. Use the latest model in each tier; check Anthropic's current model list for the live IDs.
+
+**Haiku** (cheapest tier, ~90% of Sonnet capability):
 - Lightweight agents with frequent invocation
 - Pair programming and code generation
 - Worker agents in multi-agent systems
 
-**Sonnet 4.5** (Best coding model):
+**Sonnet** (best coding tier):
 - Main development work
 - Orchestrating multi-agent workflows
 - Complex coding tasks
 
-**Opus 4.5** (Deepest reasoning):
+**Opus** (deepest-reasoning tier):
 - Complex architectural decisions
 - Maximum reasoning requirements
 - Research and analysis tasks
@@ -21,7 +23,7 @@
 
 Models are pinned per-agent in each `.md` frontmatter (e.g. `model: sonnet`). Current tiering:
 
-- **Opus** — architect, planner, security-reviewer, function-analyzer
+- **Opus** — architect, planner, security-reviewer, function-analyzer, adversarial-reviewer
 - **Sonnet** — code-reviewer, database-reviewer, tdd-guide, semgrep-triager
 - **Haiku** — build-error-resolver, doc-updater, e2e-runner, refactor-cleaner, semgrep-scanner
 

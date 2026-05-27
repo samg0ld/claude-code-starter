@@ -189,14 +189,15 @@ components/Button.tsx (with variant prop)
 }
 ```
 
-## Project-Specific Rules (Example)
+## Example Project-Specific Rules
 
-**CRITICAL - NEVER REMOVE (adjust per project):**
-- Authentication/authorization code
-- Database client initialization
-- Payment processing logic
-- Core business logic modules
-- Real-time/webhook handlers
+**CRITICAL - NEVER REMOVE:**
+- Privy authentication code
+- Solana wallet integration
+- Supabase database clients
+- Redis/OpenAI semantic search
+- Market trading logic
+- Real-time subscription handlers
 
 **SAFE TO REMOVE:**
 - Old unused components in components/ folder
@@ -205,11 +206,11 @@ components/Button.tsx (with variant prop)
 - Commented-out code blocks
 - Unused TypeScript types/interfaces
 
-**ALWAYS VERIFY BEFORE REMOVING:**
-- Search functionality (lib/search, lib/cache)
-- Data fetching layers (api/*, lib/db)
-- Authentication flows (auth components, middleware)
-- Payment/order processing code
+**ALWAYS VERIFY:**
+- Semantic search functionality (lib/redis.js, lib/openai.js)
+- Market data fetching (api/markets/*, api/market/[slug]/)
+- Authentication flows (HeaderWallet.tsx, UserMenu.tsx)
+- Trading functionality (Meteora SDK integration)
 
 ## Pull Request Template
 

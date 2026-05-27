@@ -10,7 +10,7 @@
 
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Note: Attribution disabled globally via ~/.claude/settings.json.
+Note: AI attribution (Co-Authored-By, "Generated with Claude Code") is disabled via the `attribution` setting in `~/.claude/settings.json`.
 
 ## Pull Request Workflow
 

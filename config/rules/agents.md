@@ -10,6 +10,7 @@ Located in `~/.claude/agents/`. Each agent pins a model in its frontmatter match
 | architect | Opus | System design | Architectural decisions |
 | security-reviewer | Opus | Security analysis | Before commits; user input / auth / sensitive data |
 | function-analyzer | Opus | Per-function deep analysis | Security audit context building |
+| adversarial-reviewer | Opus | Adversarial stress-testing of claims/answers | Vetting important answers before acting (used by /challenge) |
 | code-reviewer | Sonnet | Code review | After writing code |
 | database-reviewer | Sonnet | PostgreSQL review | SQL / schema / migration work |
 | tdd-guide | Sonnet | Test-driven development | New features, bug fixes |
