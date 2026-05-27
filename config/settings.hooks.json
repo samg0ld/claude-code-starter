@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Canonical hooks block. Merged into ~/.claude/settings.json by setup.sh/setup.ps1 via merge-hooks-settings.js. Edit here, not in installed settings.json -- local edits will be overwritten on next setup run.",
   "hooks": {
     "PreToolUse": [
       {
