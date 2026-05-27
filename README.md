@@ -6,8 +6,8 @@ An opinionated configuration layer for [Claude Code](https://claude.ai/code) tha
 
 | Component | Count | What it does |
 |-----------|-------|-------------|
-| **Agents** | 13 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture decisions |
-| **Commands** | 19 | Slash commands like `/tdd`, `/code-review`, `/orchestrate` for opinionated workflows |
+| **Agents** | 14 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture, adversarial review |
+| **Commands** | 20 | Slash commands like `/tdd`, `/code-review`, `/orchestrate`, `/challenge` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
 | **Hooks** | 14 | Auto-formatting, type-checking, context freshness guard, session persistence |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
@@ -17,7 +17,7 @@ An opinionated configuration layer for [Claude Code](https://claude.ai/code) tha
 
 Claude Code ships with agents, slash commands, hooks, and memory out of the box. This starter kit builds on that foundation with opinionated defaults so you don't have to configure everything from scratch:
 
-- **Specialized agents with model routing** — 13 purpose-built agents for planning, code review, TDD, security, architecture, and more. Planner and security reviewer use Opus for deep reasoning; everything else uses Sonnet for cost efficiency.
+- **Specialized agents with model routing** — 14 purpose-built agents for planning, code review, TDD, security, architecture, adversarial review, and more. Opus tier for planner/architect/security-reviewer/adversarial-reviewer; Sonnet for code/database/tdd reviewers; Haiku for build/refactor/doc/e2e/scanner workers.
 - **Context freshness guard** — Tracks tool calls and context window usage, warns at thresholds, and prevents degraded responses from stale context.
 - **Session persistence** — Session hooks save context so the next session can pick up where you left off.
 - **Continuous learning** — Run `/learn` after solving a non-trivial problem. The pattern is extracted and saved as a skill file that persists across sessions and machines via git.
@@ -39,19 +39,20 @@ cd ~/Dev/claude-code-starter
 # Restart Claude Code to pick up changes
 ```
 
-That's it. You now have 13 agents, 18 commands, and 14 hooks active.
+That's it. You now have 14 agents, 20 commands, and 14 hooks active. Re-run with `--dry-run` (`-DryRun` on PowerShell) to preview changes before applying.
 
 ## What this adds over vanilla Claude Code
 
 | Capability | Claude Code (built-in) | With this starter |
 |-----------|----------------------|-------------------|
-| Agents | General-purpose | 13 specialized agents with model routing |
-| Slash commands | Built-in basics | 18 additional workflow commands (`/tdd`, `/orchestrate`, etc.) |
+| Agents | General-purpose | 14 specialized agents with model-tier routing |
+| Slash commands | Built-in basics | 20 additional workflow commands (`/tdd`, `/orchestrate`, `/challenge`, etc.) |
 | Hooks | Framework exists | 14 pre-configured hooks (auto-format, type-check, context guard, session persistence) |
 | Session memory | Memory system | Session hooks that save/restore context automatically |
 | Pattern learning | Skills system | `/learn` extracts and saves reusable patterns via git |
-| Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates |
+| Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates; `/challenge` fan-out adversarial review |
 | Rules | Project-level CLAUDE.md | 7 opinionated rules (style, security, testing, git) |
+| Settings install | Manual | Surgical merge of hooks block; preserves your `model`, `enabledPlugins`, etc. |
 
 ## What's included
 
@@ -66,6 +67,7 @@ Specialized sub-agents launched via the Agent tool. Each has a focused prompt an
 | `code-reviewer` | After writing code, before committing |
 | `tdd-guide` | New features — writes tests first |
 | `security-reviewer` | Security-sensitive code |
+| `adversarial-reviewer` | Stress-test a claim or research conclusion (used by `/challenge`) |
 | `build-error-resolver` | Build failures, type errors |
 | `e2e-runner` | Critical user flow testing |
 | `refactor-cleaner` | Dead code, tech debt cleanup |
@@ -82,6 +84,7 @@ Type `/` in Claude Code to see all available commands. Key ones:
 - **`/tdd`** — Write tests first, then implement. Enforces 80%+ coverage.
 - **`/code-review`** — Review code for quality, security, and maintainability
 - **`/orchestrate`** — Run a multi-agent pipeline (plan → implement → review → security)
+- **`/challenge`** — Fan out three adversarial reviewers (Skeptic / Contrarian / Missing-Evidence Hunter) against a claim or research output, then synthesize a HELD / CONTESTED / OVERTURNED verdict
 - **`/learn`** — Extract a reusable pattern from the current session
 - **`/security-scan`** — Scan for vulnerabilities with regex fallback + static analysis
 - **`/build-fix`** — Resolve build and type errors with minimal diffs
@@ -148,6 +151,16 @@ See `examples/custom-skill-example.md` for a complete walkthrough.
 
 See `examples/mcp-server-example.md` for the full pattern including registration, health checks, and cross-platform setup.
 
+### Dev-layer (optional)
+
+If you keep multiple projects under one directory (e.g. `~/Dev/`), the starter can install a `CLAUDE.md` and `rules/hooks.md` at that parent so they apply to every child project automatically.
+
+- **Default behavior**: setup uses the parent of this clone as `$DEV_ROOT` (e.g. `~/Dev` if you cloned into `~/Dev/claude-code-starter`).
+- **Override**: set the `DEV_ROOT` environment variable to point somewhere else, or unset/point at a non-existent path to skip dev-layer install entirely.
+- **What gets installed**: `dev/CLAUDE.md` → `$DEV_ROOT/CLAUDE.md`, `dev/rules/hooks.md` → `$DEV_ROOT/.claude/rules/hooks.md`. Both are symlinked, so editing the files in this repo updates them everywhere immediately.
+
+Edit `dev/CLAUDE.md` to tailor the multi-project workflow guidance to your setup.
+
 ### Obsidian Integration (Optional but Recommended)
 
 The session hooks integrate with [Obsidian](https://obsidian.md) to persist project knowledge across sessions. This is optional — hooks silently no-op if Obsidian isn't configured.
@@ -199,9 +212,31 @@ All session hooks check for the vault and skip gracefully if not found. You lose
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `CLAUDE_TIMEZONE` | System timezone | Timezone for date/time in hooks and logs |
-| `CLAUDE_DEV_ROOT` | (none) | Additional project root directory |
-| `OBSIDIAN_VAULT` | (none) | Path to Obsidian vault for session persistence |
+| `CLAUDE_DEV_ROOT` | (none) | Additional project root directory the hooks recognize |
+| `DEV_ROOT` | Parent of this repo | Where the setup scripts install the dev-layer symlinks (set to skip / redirect) |
+| `OBSIDIAN_VAULT` | (none, strictly opt-in) | Path to Obsidian vault for session persistence |
 | `CLAUDE_PACKAGE_MANAGER` | Auto-detected | Force a specific package manager (npm/pnpm/yarn/bun) |
+
+## Setup-script flags
+
+Both `setup.sh` and `setup.ps1` accept these:
+
+| Flag | sh | ps1 | What it does |
+|------|----|-----|-------------|
+| Dry run | `--dry-run` or `DRY_RUN=1` | `-DryRun` | Preview everything that would be written, without changing files |
+| Force overwrite | `FORCE=1` | `-Force` | Copy regardless of timestamps |
+| Keep stale files | `NO_PRUNE=1` | `-NoPrune` | Don't delete files in `~/.claude/` that aren't in this repo |
+| Override DEV_ROOT | `DEV_ROOT=path` | `$env:DEV_ROOT = "path"` | Target a non-default directory for dev-layer symlinks |
+
+### Settings merge behavior
+
+The setup script does **not** overwrite your `~/.claude/settings.json`. Instead, it runs `merge-hooks-settings.js`, which:
+
+1. Reads `config/settings.hooks.json` (this repo's canonical hooks + statusLine block)
+2. Merges it into your existing `~/.claude/settings.json`, preserving keys like `model`, `enabledPlugins`, `voiceEnabled`, `extraKnownMarketplaces`, etc.
+3. Backs up your prior settings to `settings.json.backup-<timestamp>` before writing
+
+This means you can safely re-run setup at any time without losing per-machine preferences.
 
 ## Platform support
 
