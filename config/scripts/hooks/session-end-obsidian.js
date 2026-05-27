@@ -21,8 +21,8 @@
  *   - Vault path doesn't exist
  */
 
-const path = require('path');
-const fs = require('fs');
+const path = require("path");
+const fs = require("fs");
 const {
   getProjectRoot,
   getDateString,
@@ -30,16 +30,16 @@ const {
   readStdinJson,
   ensureDir,
   readFile,
-  log
-} = require('../lib/utils');
+  log,
+} = require("../lib/utils");
 const {
   getVaultPath,
   getObsidianFolder,
   getObsidianLogPath,
-  getMonthDisplayName
-} = require('../lib/obsidian');
+  getMonthDisplayName,
+} = require("../lib/obsidian");
 
-const DEV_DIR = 'Development';
+const DEV_DIR = "Development";
 const TIMEOUT_MS = 8000;
 const INSIGHTS_MAX_BYTES = 20480; // 20KB cap for Session Insights.md
 
@@ -65,7 +65,7 @@ const INSIGHT_SIGNALS = [
   // Patterns and rules
   /\b(pattern|approach|convention)\b.*\b(is|should|must)\b/i,
   /\b(important:|note:|remember:|fyi:?)\b/i,
-  /\b(from now on|going forward|in the future)\b/i
+  /\b(from now on|going forward|in the future)\b/i,
 ];
 
 /**
@@ -78,7 +78,7 @@ function parseTranscript(transcriptPath) {
     filesCreated: new Set(),
     toolsUsed: new Set(),
     gitCommits: [],
-    gitPushes: []
+    gitPushes: [],
   };
 
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
@@ -90,7 +90,9 @@ function parseTranscript(transcriptPath) {
   try {
     const stat = fs.statSync(transcriptPath);
     if (stat.size > MAX_TRANSCRIPT_BYTES) {
-      log(`[Obsidian] Transcript too large (${(stat.size / 1024 / 1024).toFixed(1)}MB), skipping parse`);
+      log(
+        `[Obsidian] Transcript too large (${(stat.size / 1024 / 1024).toFixed(1)}MB), skipping parse`,
+      );
       return result;
     }
   } catch {
@@ -98,46 +100,63 @@ function parseTranscript(transcriptPath) {
   }
 
   try {
-    const content = fs.readFileSync(transcriptPath, 'utf8');
-    const lines = content.split('\n').filter(line => line.trim());
+    const content = fs.readFileSync(transcriptPath, "utf8");
+    const lines = content.split("\n").filter((line) => line.trim());
 
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
 
         // User messages
-        if (entry.type === 'user' && entry.message?.content) {
+        if (entry.type === "user" && entry.message?.content) {
           const msg = entry.message.content;
-          if (typeof msg === 'string' && !msg.startsWith('<') && msg.length > 10 && msg.length < 500) {
+          if (
+            typeof msg === "string" &&
+            !msg.startsWith("<") &&
+            msg.length > 10 &&
+            msg.length < 500
+          ) {
             result.userMessages.push(msg);
           }
         }
 
         // Tool usage from assistant messages
-        if (entry.type === 'assistant' && entry.message?.content && Array.isArray(entry.message.content)) {
+        if (
+          entry.type === "assistant" &&
+          entry.message?.content &&
+          Array.isArray(entry.message.content)
+        ) {
           for (const block of entry.message.content) {
-            if (block.type !== 'tool_use') continue;
+            if (block.type !== "tool_use") continue;
 
             result.toolsUsed.add(block.name);
 
-            if (block.name === 'Edit' && block.input?.file_path) {
+            if (block.name === "Edit" && block.input?.file_path) {
               result.filesEdited.add(block.input.file_path);
             }
-            if (block.name === 'Write' && block.input?.file_path) {
+            if (block.name === "Write" && block.input?.file_path) {
               result.filesCreated.add(block.input.file_path);
             }
           }
         }
 
         // Detect git commits and pushes from tool results
-        if (entry.type === 'tool_result') {
-          const toolOutput = entry.tool_result?.output || '';
-          const commitMatch = toolOutput.match(/^\[[\w-]+ ([a-f0-9]{7,})\] (.+)$/m);
+        if (entry.type === "tool_result") {
+          const toolOutput = entry.tool_result?.output || "";
+          const commitMatch = toolOutput.match(
+            /^\[[\w-]+ ([a-f0-9]{7,})\] (.+)$/m,
+          );
           if (commitMatch) {
-            result.gitCommits.push({ hash: commitMatch[1], message: commitMatch[2] });
+            result.gitCommits.push({
+              hash: commitMatch[1],
+              message: commitMatch[2],
+            });
           }
           if (/-> (main|master|origin)/.test(toolOutput)) {
-            result.gitPushes.push(toolOutput.match(/([a-f0-9]{7,})\.\.([a-f0-9]{7,})/)?.[2] || 'pushed');
+            result.gitPushes.push(
+              toolOutput.match(/([a-f0-9]{7,})\.\.([a-f0-9]{7,})/)?.[2] ||
+                "pushed",
+            );
           }
         }
       } catch {
@@ -156,7 +175,7 @@ function parseTranscript(transcriptPath) {
  */
 function buildStatusContent(parsed, sessionId, projectName) {
   const today = getDateString();
-  const shortId = sessionId ? sessionId.slice(-8) : 'unknown';
+  const shortId = sessionId ? sessionId.slice(-8) : "unknown";
 
   // Build completed list from concrete actions
   const completed = [];
@@ -166,25 +185,25 @@ function buildStatusContent(parsed, sessionId, projectName) {
   }
 
   if (parsed.gitPushes.length > 0) {
-    completed.push('Pushed to remote');
+    completed.push("Pushed to remote");
   }
 
   // Group file changes
   if (parsed.filesCreated.size > 0) {
     const created = Array.from(parsed.filesCreated)
-      .filter(f => !f.includes('node_modules') && !f.includes('.git'))
-      .map(f => path.basename(f));
+      .filter((f) => !f.includes("node_modules") && !f.includes(".git"))
+      .map((f) => path.basename(f));
     if (created.length > 0) {
-      completed.push(`Created: ${created.join(', ')}`);
+      completed.push(`Created: ${created.join(", ")}`);
     }
   }
 
   if (parsed.filesEdited.size > 0) {
     const edited = Array.from(parsed.filesEdited)
-      .filter(f => !f.includes('node_modules') && !f.includes('.git'))
-      .map(f => path.basename(f));
+      .filter((f) => !f.includes("node_modules") && !f.includes(".git"))
+      .map((f) => path.basename(f));
     if (edited.length > 0) {
-      completed.push(`Edited: ${edited.join(', ')}`);
+      completed.push(`Edited: ${edited.join(", ")}`);
     }
   }
 
@@ -192,45 +211,49 @@ function buildStatusContent(parsed, sessionId, projectName) {
   const requests = parsed.userMessages.slice(-10);
 
   // Format the status note
-  const completedList = completed.length > 0
-    ? completed.map(c => `- ${c}`).join('\n')
-    : '- (auto-detected — check session transcript for details)';
+  const completedList =
+    completed.length > 0
+      ? completed.map((c) => `- ${c}`).join("\n")
+      : "- (auto-detected — check session transcript for details)";
 
-  const requestList = requests.length > 0
-    ? requests.map(r => `- ${r.length > 120 ? r.slice(0, 120) + '...' : r}`).join('\n')
-    : '- (none captured)';
+  const requestList =
+    requests.length > 0
+      ? requests
+          .map((r) => `- ${r.length > 120 ? r.slice(0, 120) + "..." : r}`)
+          .join("\n")
+      : "- (none captured)";
 
   const frontmatter = [
-    '---',
+    "---",
     `tags: [development, status, ${projectName}]`,
     `project: ${projectName}`,
     `updated: "${today}"`,
     `session: "${shortId}"`,
-    '---'
-  ].join('\n');
+    "---",
+  ].join("\n");
 
   const body = [
-    '# Status',
-    '',
-    '## Last Session',
+    "# Status",
+    "",
+    "## Last Session",
     `- **Date:** ${today}`,
     `- **Session ID:** ${shortId}`,
-    '',
-    '### Completed',
+    "",
+    "### Completed",
     completedList,
-    '',
-    '### In Progress',
-    '- (update manually or in next session)',
-    '',
-    '### Next Up',
-    '- (update manually or in next session)',
-    '',
-    '### Gotchas',
-    '- (update manually or in next session)',
-    '',
-    '### Session Requests',
-    requestList
-  ].join('\n');
+    "",
+    "### In Progress",
+    "- (update manually or in next session)",
+    "",
+    "### Next Up",
+    "- (update manually or in next session)",
+    "",
+    "### Gotchas",
+    "- (update manually or in next session)",
+    "",
+    "### Session Requests",
+    requestList,
+  ].join("\n");
 
   return `${frontmatter}\n\n${body}\n`;
 }
@@ -244,7 +267,7 @@ function appendToSessionLog(parsed, sessionId, projectName) {
 
   const today = getDateString();
   const time = getTimeString();
-  const shortId = sessionId ? sessionId.slice(-8) : 'unknown';
+  const shortId = sessionId ? sessionId.slice(-8) : "unknown";
 
   // Build lean entry lines
   const details = [];
@@ -254,29 +277,29 @@ function appendToSessionLog(parsed, sessionId, projectName) {
   }
 
   if (parsed.gitPushes.length > 0) {
-    details.push('- Pushed to remote');
+    details.push("- Pushed to remote");
   }
 
   const created = Array.from(parsed.filesCreated)
-    .filter(f => !f.includes('node_modules') && !f.includes('.git'))
-    .map(f => path.basename(f));
+    .filter((f) => !f.includes("node_modules") && !f.includes(".git"))
+    .map((f) => path.basename(f));
   if (created.length > 0) {
-    details.push(`- Created: ${created.join(', ')}`);
+    details.push(`- Created: ${created.join(", ")}`);
   }
 
   const edited = Array.from(parsed.filesEdited)
-    .filter(f => !f.includes('node_modules') && !f.includes('.git'))
-    .map(f => path.basename(f));
+    .filter((f) => !f.includes("node_modules") && !f.includes(".git"))
+    .map((f) => path.basename(f));
   if (edited.length > 0) {
-    details.push(`- Edited: ${edited.join(', ')}`);
+    details.push(`- Edited: ${edited.join(", ")}`);
   }
 
   // Condense user requests to 3 most recent, short
-  const requests = parsed.userMessages.slice(-3).map(r =>
-    r.length > 80 ? r.slice(0, 80) + '...' : r
-  );
+  const requests = parsed.userMessages
+    .slice(-3)
+    .map((r) => (r.length > 80 ? r.slice(0, 80) + "..." : r));
   if (requests.length > 0) {
-    details.push(`- Requests: ${requests.map(r => `"${r}"`).join(', ')}`);
+    details.push(`- Requests: ${requests.map((r) => `"${r}"`).join(", ")}`);
   }
 
   // If somehow no details, skip
@@ -284,10 +307,10 @@ function appendToSessionLog(parsed, sessionId, projectName) {
 
   // Check if log file exists and if today's date header is already present
   ensureDir(path.dirname(logPath));
-  const existing = readFile(logPath) || '';
+  const existing = readFile(logPath) || "";
   const dateHeader = `## ${today}`;
 
-  let entry = '';
+  let entry = "";
 
   if (existing.length === 0) {
     // New monthly log — add frontmatter and month header
@@ -299,14 +322,16 @@ function appendToSessionLog(parsed, sessionId, projectName) {
     entry += `\n${dateHeader}\n\n`;
   } else {
     // Same day — just append
-    entry += '\n';
+    entry += "\n";
   }
 
   entry += `### ${time} — ${projectName} \`${shortId}\`\n`;
-  entry += details.join('\n') + '\n';
+  entry += details.join("\n") + "\n";
 
-  fs.appendFileSync(logPath, entry, 'utf8');
-  log(`[Obsidian] Appended to session log: Development/Logs/${path.basename(logPath)}`);
+  fs.appendFileSync(logPath, entry, "utf8");
+  log(
+    `[Obsidian] Appended to session log: Development/Logs/${path.basename(logPath)}`,
+  );
 }
 
 /**
@@ -320,23 +345,23 @@ function extractInsights(parsed) {
   const NOISE_FILTERS = [
     /^(yes|no|ok|sure|yeah|nah|do it|go ahead)\b/i,
     /^(read|check|look at|open|show|run|list)\b/i,
-    /\b(the file|the directory|the path|the test)\b.*\b(at|in|from)\b/i
+    /\b(the file|the directory|the path|the test)\b.*\b(at|in|from)\b/i,
   ];
 
   // Extract from user messages that match signal patterns
   for (const msg of parsed.userMessages) {
     if (msg.length < 30 || msg.length > 500) continue;
-    if (msg.startsWith('<')) continue;
+    if (msg.startsWith("<")) continue;
     if (msg.split(/\s+/).length < 5) continue; // require 5+ words
 
-    const matchesSignal = INSIGHT_SIGNALS.some(pattern => pattern.test(msg));
+    const matchesSignal = INSIGHT_SIGNALS.some((pattern) => pattern.test(msg));
     if (!matchesSignal) continue;
 
-    const isNoise = NOISE_FILTERS.some(pattern => pattern.test(msg));
+    const isNoise = NOISE_FILTERS.some((pattern) => pattern.test(msg));
     if (isNoise) continue;
 
     // Clean up the message for storage
-    const cleaned = msg.replace(/\s+/g, ' ').trim();
+    const cleaned = msg.replace(/\s+/g, " ").trim();
     insights.push(`"${cleaned}"`);
   }
 
@@ -356,37 +381,37 @@ function extractInsights(parsed) {
 function appendInsights(insights, sessionId, projectDir, folderName) {
   if (insights.length === 0) return;
 
-  const insightsPath = path.join(projectDir, 'Session Insights.md');
+  const insightsPath = path.join(projectDir, "Session Insights.md");
   const today = getDateString();
-  const shortId = sessionId ? sessionId.slice(-8) : 'unknown';
+  const shortId = sessionId ? sessionId.slice(-8) : "unknown";
 
   // Deduplicate against existing lines (exact match, not substring)
-  const existing = readFile(insightsPath) || '';
+  const existing = readFile(insightsPath) || "";
   const existingLines = new Set(
-    existing.split('\n').map(l => l.replace(/^- /, '').trim())
+    existing.split("\n").map((l) => l.replace(/^- /, "").trim()),
   );
-  const newInsights = insights.filter(i => !existingLines.has(i));
+  const newInsights = insights.filter((i) => !existingLines.has(i));
   if (newInsights.length === 0) {
-    log('[Obsidian] All insights already present, skipping');
+    log("[Obsidian] All insights already present, skipping");
     return;
   }
 
   // Create file with frontmatter if it doesn't exist
   if (!existing) {
     const header = [
-      '---',
+      "---",
       `tags: [development, insights, ${folderName}]`,
       `project: ${folderName}`,
-      '---',
-      '',
-      '# Session Insights',
-      '',
-      'Auto-extracted decisions, gotchas, and patterns from coding sessions.',
-      '',
-      '---',
-      ''
-    ].join('\n');
-    fs.writeFileSync(insightsPath, header, 'utf8');
+      "---",
+      "",
+      "# Session Insights",
+      "",
+      "Auto-extracted decisions, gotchas, and patterns from coding sessions.",
+      "",
+      "---",
+      "",
+    ].join("\n");
+    fs.writeFileSync(insightsPath, header, "utf8");
   }
 
   // Build entry
@@ -395,8 +420,10 @@ function appendInsights(insights, sessionId, projectDir, folderName) {
     entry += `- ${insight}\n`;
   }
 
-  fs.appendFileSync(insightsPath, entry, 'utf8');
-  log(`[Obsidian] Appended ${newInsights.length} insights to Session Insights.md`);
+  fs.appendFileSync(insightsPath, entry, "utf8");
+  log(
+    `[Obsidian] Appended ${newInsights.length} insights to Session Insights.md`,
+  );
 
   // Enforce size cap
   enforceInsightsCap(insightsPath);
@@ -408,7 +435,7 @@ function appendInsights(insights, sessionId, projectDir, folderName) {
  */
 function enforceInsightsCap(filePath) {
   const content = readFile(filePath);
-  if (!content || Buffer.byteLength(content, 'utf8') <= INSIGHTS_MAX_BYTES) {
+  if (!content || Buffer.byteLength(content, "utf8") <= INSIGHTS_MAX_BYTES) {
     return;
   }
 
@@ -421,11 +448,13 @@ function enforceInsightsCap(filePath) {
   const header = content.slice(0, headerEnd);
   const body = content.slice(headerEnd);
 
-  const blocks = body.split(/(?=^## \d{4}-\d{2}-\d{2})/m).filter(b => b.trim());
+  const blocks = body
+    .split(/(?=^## \d{4}-\d{2}-\d{2})/m)
+    .filter((b) => b.trim());
 
   // Remove oldest blocks from front until under cap — O(n) incremental
-  const headerBytes = Buffer.byteLength(header, 'utf8');
-  const blockBytes = blocks.map(b => Buffer.byteLength(b, 'utf8'));
+  const headerBytes = Buffer.byteLength(header, "utf8");
+  const blockBytes = blocks.map((b) => Buffer.byteLength(b, "utf8"));
   let totalBytes = headerBytes + blockBytes.reduce((a, b) => a + b, 0);
 
   while (blocks.length > 1 && totalBytes > INSIGHTS_MAX_BYTES) {
@@ -433,58 +462,59 @@ function enforceInsightsCap(filePath) {
     blocks.shift();
   }
 
-  fs.writeFileSync(filePath, header + blocks.join(''), 'utf8');
-  log('[Obsidian] Trimmed Session Insights.md to stay under size cap');
+  fs.writeFileSync(filePath, header + blocks.join(""), "utf8");
+  log("[Obsidian] Trimmed Session Insights.md to stay under size cap");
 }
 
 async function main() {
   const input = await readStdinJson();
 
-  const sessionId = input.session_id || '';
-  const transcriptPath = input.transcript_path || '';
+  const sessionId = input.session_id || "";
+  const transcriptPath = input.transcript_path || "";
   const cwd = input.cwd || process.cwd();
 
   // Determine project from cwd (auto-maps any Dev project)
   const projectRoot = getProjectRoot(cwd);
   if (!projectRoot) {
-    log('[Obsidian] Not in a ~/Dev project, skipping status update');
+    log("[Obsidian] Not in a ~/Dev project, skipping status update");
     process.exit(0);
   }
 
   const obsidianFolder = getObsidianFolder(cwd);
   if (!obsidianFolder) {
-    log('[Obsidian] Could not resolve Obsidian folder');
+    log("[Obsidian] Could not resolve Obsidian folder");
     process.exit(0);
   }
 
   // Check vault exists
   const vaultPath = getVaultPath();
-  if (!vaultPath || !fs.existsSync(vaultPath)) {
+  if (!fs.existsSync(vaultPath)) {
     log(`[Obsidian] Vault not found at: ${vaultPath}`);
     process.exit(0);
   }
 
   const statusDir = path.join(vaultPath, DEV_DIR, obsidianFolder);
-  const statusFile = path.join(statusDir, 'Status.md');
+  const statusFile = path.join(statusDir, "Status.md");
 
   // Parse transcript
   const parsed = parseTranscript(transcriptPath);
 
   // Only update if there was meaningful activity
-  const hasActivity = parsed.filesEdited.size > 0
-    || parsed.filesCreated.size > 0
-    || parsed.gitCommits.length > 0
-    || parsed.userMessages.length > 2;
+  const hasActivity =
+    parsed.filesEdited.size > 0 ||
+    parsed.filesCreated.size > 0 ||
+    parsed.gitCommits.length > 0 ||
+    parsed.userMessages.length > 2;
 
   if (!hasActivity) {
-    log('[Obsidian] No meaningful activity detected, skipping status update');
+    log("[Obsidian] No meaningful activity detected, skipping status update");
     process.exit(0);
   }
 
   // Write status
   ensureDir(statusDir);
   const content = buildStatusContent(parsed, sessionId, obsidianFolder);
-  fs.writeFileSync(statusFile, content, 'utf8');
+  fs.writeFileSync(statusFile, content, "utf8");
   log(`[Obsidian] Updated ${DEV_DIR}/${obsidianFolder}/Status.md`);
 
   // Append to global monthly session log
@@ -500,13 +530,13 @@ async function main() {
 }
 
 const timeout = setTimeout(() => {
-  log('[Obsidian] Timeout reached, exiting gracefully');
+  log("[Obsidian] Timeout reached, exiting gracefully");
   process.exit(0);
 }, TIMEOUT_MS);
 
 main()
   .then(() => clearTimeout(timeout))
-  .catch(err => {
+  .catch((err) => {
     clearTimeout(timeout);
     log(`[Obsidian] Error: ${err.message}`);
     process.exit(0);

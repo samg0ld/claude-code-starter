@@ -31,11 +31,25 @@ function getClaudeDir() {
  * Get the project root if cwd is under any DEV_ROOT
  * Returns null if not in a project
  */
-// Where your project directories live. Add/modify as needed.
+// Where your project directories live. Add/modify as needed,
+// or set CLAUDE_DEV_ROOT to override.
 const DEV_ROOTS = [
   path.join(getHomeDir(), 'Dev'),
   ...(process.env.CLAUDE_DEV_ROOT ? [process.env.CLAUDE_DEV_ROOT] : [])
 ];
+
+/**
+ * Directory names (lowercase) that are *containers* for projects rather
+ * than projects themselves. When cwd is under one of these, descend one
+ * more level to find the real project root.
+ *
+ * Example: ~/Dev/<parent>/ contains both `website/` and `app/`. Without
+ * listing <parent> here, every session under ~/Dev/<parent>/* would
+ * collapse to the same project — breaking per-project status tracking.
+ *
+ * Add entries as needed for your repo layout, e.g. `new Set(['monorepo'])`.
+ */
+const PARENT_DIRS = new Set([]);
 
 function getProjectRoot(cwd) {
   if (!cwd) return null;
@@ -55,7 +69,15 @@ function getProjectRoot(cwd) {
       continue;
     }
 
-    const firstDir = relativePath.split(path.sep)[0];
+    const parts = relativePath.split(path.sep);
+    const firstDir = parts[0];
+
+    // Parent-dir case: descend one more level so <parent>/<child> resolves to
+    // ~/Dev/<parent>/<child> rather than collapsing to ~/Dev/<parent>.
+    if (PARENT_DIRS.has(firstDir.toLowerCase()) && parts.length >= 2) {
+      return path.join(normalizedDevRoot, parts[0], parts[1]);
+    }
+
     return path.join(normalizedDevRoot, firstDir);
   }
 
@@ -529,6 +551,7 @@ module.exports = {
   getTempDir,
   ensureDir,
   DEV_ROOTS,
+  PARENT_DIRS,
 
   // Date/Time
   getTimezone,

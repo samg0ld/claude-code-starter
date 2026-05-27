@@ -17,41 +17,71 @@ const {
   getHomeDir,
   getTimezone,
   isWindows,
+  DEV_ROOTS,
 } = require("./utils");
 
 /**
  * Get the Obsidian vault path.
- * Returns null if OBSIDIAN_VAULT is not set and no default exists.
+ * Returns null if OBSIDIAN_VAULT is not set.
+ *
+ * Vault path is strictly opt-in via the OBSIDIAN_VAULT environment variable.
+ * Without it, all Obsidian integration silently no-ops.
  */
 function getVaultPath() {
-  if (process.env.OBSIDIAN_VAULT) {
+  if (process.env.OBSIDIAN_VAULT && fs.existsSync(process.env.OBSIDIAN_VAULT)) {
     return process.env.OBSIDIAN_VAULT;
-  }
-  // Default path — override via OBSIDIAN_VAULT env var
-  const defaultPath = path.join(getHomeDir(), "Obsidian", "Life");
-  if (fs.existsSync(defaultPath)) {
-    return defaultPath;
   }
   return null;
 }
 
 /**
- * Optional overrides: map a Dev directory name (lowercase) to a
+ * Optional overrides: map an auto-derived project slug (lowercase) to a
  * different Obsidian folder name under Development/.
- * If a project is NOT listed here, it auto-maps using its directory name.
+ *
+ * For top-level projects (~/Dev/<name>/), the slug is just <name>.
+ * For parent-dir projects (~/Dev/<parent>/<child>/, where <parent> is in
+ * PARENT_DIRS), the slug is <parent>-<child>.
+ *
+ * Add an entry here only when the auto-derived slug doesn't match an
+ * existing Obsidian folder name.
  */
 const PROJECT_MAP = {
-  // 'my-repo': 'Different Obsidian Folder'
+  // 'parent-child': 'Different Obsidian Folder Name',
 };
 
 /**
  * Resolve the Obsidian folder name for a project.
- * Uses PROJECT_MAP override if present, otherwise the directory name as-is.
+ *
+ * Builds the folder name from the project root's path relative to DEV_ROOT,
+ * joining segments with `-`. So a 2-level project under a parent dir gets
+ * a hyphenated name (parent-child) while a top-level project keeps its
+ * single-segment name.
+ *
+ * PROJECT_MAP overrides take precedence for legacy folder names.
  */
 function getObsidianFolder(cwd) {
   const projectRoot = getProjectRoot(cwd);
   if (!projectRoot) return null;
 
+  const normalizedRoot = path.resolve(projectRoot);
+
+  for (const devRoot of DEV_ROOTS) {
+    const normalizedDevRoot = path.resolve(devRoot);
+    if (
+      !normalizedRoot.startsWith(normalizedDevRoot + path.sep) &&
+      normalizedRoot !== normalizedDevRoot
+    ) {
+      continue;
+    }
+
+    const relative = path.relative(normalizedDevRoot, normalizedRoot);
+    if (!relative || relative === ".") continue;
+
+    const dirName = relative.split(path.sep).join("-").toLowerCase();
+    return PROJECT_MAP[dirName] || dirName;
+  }
+
+  // Fallback: bare basename (preserves prior behavior if path lookup fails)
   const dirName = path.basename(projectRoot).toLowerCase();
   return PROJECT_MAP[dirName] || dirName;
 }
