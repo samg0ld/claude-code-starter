@@ -165,9 +165,11 @@ if (Test-Path "$ScriptDir\config\scripts") {
     Sync-Dir "$ScriptDir\config\scripts\hooks" (Join-Path $ClaudeDir "scripts\hooks") "*.js"
     Sync-Dir "$ScriptDir\config\scripts\hooks" (Join-Path $ClaudeDir "scripts\hooks") "*.py"
     Sync-Dir "$ScriptDir\config\scripts\lib" (Join-Path $ClaudeDir "scripts\lib") "*.js"
-    # Standalone scripts (health check, etc.)
-    if (Test-Path "$ScriptDir\config\scripts\check-mcp-health.js") {
-        Copy-Item "$ScriptDir\config\scripts\check-mcp-health.js" (Join-Path $ClaudeDir "scripts\check-mcp-health.js") -Force
+    # Standalone scripts (health check, MCP tool-poisoning scanner, injection audit)
+    foreach ($s in @("check-mcp-health.js", "scan-mcp-tools.js", "audit-tool-responses.js")) {
+        if (Test-Path "$ScriptDir\config\scripts\$s") {
+            Copy-Item "$ScriptDir\config\scripts\$s" (Join-Path $ClaudeDir "scripts\$s") -Force
+        }
     }
     Write-Host "  Installed hook scripts"
 }

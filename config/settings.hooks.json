@@ -38,6 +38,51 @@
             "command": "node $HOME/.claude/scripts/hooks/context-guard.js"
           }
         ]
+      },
+      {
+        "matcher": "Bash|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/pre-tool-taint-gate.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__claude_ai_Gmail__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/pre-tool-taint-gate.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__claude_ai_Google_Calendar__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/pre-tool-taint-gate.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_discord_discord__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/pre-tool-taint-gate.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__email__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/pre-tool-taint-gate.js"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -47,6 +92,15 @@
           {
             "type": "command",
             "command": "node $HOME/.claude/scripts/hooks/session-start.js"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/session-start-mcp-scan.js"
           }
         ]
       }
@@ -107,6 +161,42 @@
           {
             "type": "command",
             "command": "node $HOME/.claude/scripts/hooks/post-edit-console-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/post-tool-taint-source.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__email__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/post-tool-taint-source.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_discord_discord__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/post-tool-taint-source.js"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*(web.?search|web.?fetch|brave|tavily|exa).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/scripts/hooks/post-tool-taint-source.js"
           }
         ]
       }

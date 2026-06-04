@@ -7,11 +7,12 @@ An opinionated configuration layer for [Claude Code](https://claude.ai/code) tha
 | Component | Count | What it does |
 |-----------|-------|-------------|
 | **Agents** | 14 | Specialized sub-agents for planning, code review, TDD, security analysis, architecture, adversarial review |
-| **Commands** | 20 | Slash commands like `/tdd`, `/code-review`, `/orchestrate`, `/challenge` for opinionated workflows |
+| **Commands** | 21 | Slash commands like `/tdd`, `/code-review`, `/orchestrate`, `/challenge`, `/audit-injection` for opinionated workflows |
 | **Rules** | 7 | Coding style, security, testing, and git workflow standards enforced across all sessions |
-| **Hooks** | 14 | Auto-formatting, type-checking, context freshness guard, session persistence |
+| **Hooks** | 17 | Auto-formatting, type-checking, context freshness guard, session persistence, MCP tool-poisoning warnings, indirect-injection taint gate |
 | **Skills** | 2+ | Security scanning skill + your own learned patterns via `/learn` |
 | **Contexts** | 3 | Switch between dev, research, and review modes |
+| **Agent-safety tooling** | 3 | MCP tool-poisoning scanner, indirect-injection taint gate, retrospective injection audit |
 
 ## Why this exists
 
@@ -23,6 +24,7 @@ Claude Code ships with agents, slash commands, hooks, and memory out of the box.
 - **Continuous learning** — Run `/learn` after solving a non-trivial problem. The pattern is extracted and saved as a skill file that persists across sessions and machines via git.
 - **Auto-formatting and type-checking** — After every edit, Prettier formats and `tsc` type-checks automatically. Issues are caught before they compound.
 - **Quality-gated orchestration** — `/orchestrate` chains agents together with automatic quality gates between phases. If blockers are found, it fixes and re-checks before proceeding.
+- **Agent-security tooling (beyond code security)** — Most of the security layer here reviews the code Claude *writes*. This adds defenses for the *agent itself*: a SHA-256 MCP tool-poisoning scanner (catches rug-pulls / hidden-instruction tool descriptions / cross-server shadowing), a taint-tracking sink gate that asks for confirmation before an outbound action once untrusted web/email/chat content has entered the session, and `/audit-injection` for a retrospective sweep of past transcripts. These are **advisory checkpoints, not a tamper-proof perimeter** — fail-open and ask-only by design, so they raise the cost of an attack and surface the dangerous moment without bricking a session.
 - **Cross-platform** — Works on macOS and Windows. Setup scripts handle the differences.
 
 ## Quick start
@@ -39,18 +41,19 @@ cd ~/Dev/claude-code-starter
 # Restart Claude Code to pick up changes
 ```
 
-That's it. You now have 14 agents, 20 commands, and 14 hooks active. Re-run with `--dry-run` (`-DryRun` on PowerShell) to preview changes before applying.
+That's it. You now have 14 agents, 21 commands, and 17 hooks active. Re-run with `--dry-run` (`-DryRun` on PowerShell) to preview changes before applying.
 
 ## What this adds over vanilla Claude Code
 
 | Capability | Claude Code (built-in) | With this starter |
 |-----------|----------------------|-------------------|
 | Agents | General-purpose | 14 specialized agents with model-tier routing |
-| Slash commands | Built-in basics | 20 additional workflow commands (`/tdd`, `/orchestrate`, `/challenge`, etc.) |
-| Hooks | Framework exists | 14 pre-configured hooks (auto-format, type-check, context guard, session persistence) |
+| Slash commands | Built-in basics | 21 additional workflow commands (`/tdd`, `/orchestrate`, `/challenge`, `/audit-injection`, etc.) |
+| Hooks | Framework exists | 17 pre-configured hooks (auto-format, type-check, context guard, session persistence, MCP poisoning warnings, injection taint gate) |
 | Session memory | Memory system | Session hooks that save/restore context automatically |
 | Pattern learning | Skills system | `/learn` extracts and saves reusable patterns via git |
 | Multi-agent workflows | Manual | `/orchestrate` chains agents with quality gates; `/challenge` fan-out adversarial review |
+| Prompt-injection / MCP defense | None | MCP tool-poisoning scanner, taint-tracking sink gate, retrospective injection audit (advisory, fail-open) |
 | Rules | Project-level CLAUDE.md | 7 opinionated rules (style, security, testing, git) |
 | Settings install | Manual | Surgical merge of hooks block; preserves your `model`, `enabledPlugins`, etc. |
 
@@ -87,6 +90,7 @@ Type `/` in Claude Code to see all available commands. Key ones:
 - **`/challenge`** — Fan out three adversarial reviewers (Skeptic / Contrarian / Missing-Evidence Hunter) against a claim or research output, then synthesize a HELD / CONTESTED / OVERTURNED verdict
 - **`/learn`** — Extract a reusable pattern from the current session
 - **`/security-scan`** — Scan for vulnerabilities with regex fallback + static analysis
+- **`/audit-injection`** — Retrospective indirect-prompt-injection sweep of session transcripts + data-at-rest (inbound email, web-clipped notes). Read-only tripwire.
 - **`/build-fix`** — Resolve build and type errors with minimal diffs
 
 ### Hooks
@@ -95,17 +99,20 @@ Hooks run automatically at specific lifecycle points:
 
 | Hook | When | What it does |
 |------|------|-------------|
-| `pre-bash-dev-server.js` | Before Bash | Blocks dev server outside tmux |
+| `pre-bash-dev-server.js` | Before Bash | Blocks dev server outside tmux (only when tmux is installed) |
 | `pre-bash-tmux-suggest.js` | Before Bash | Suggests tmux for long-running commands |
 | `pre-bash-git-push.js` | Before Bash | Warns before git push |
 | `context-guard.js` | Before Edit/Write/Bash | Warns when context window is getting full |
+| `pre-tool-taint-gate.js` | Before Bash/WebFetch/send-MCPs | Asks for confirmation before an outbound/exfil action when the session is tainted by untrusted content (`TAINT_GATE_DISABLE=1` to disable) |
 | `post-edit-format.js` | After Edit | Auto-formats with Prettier |
 | `post-edit-typecheck.js` | After Edit (.ts/.tsx) | Runs `tsc --noEmit` |
 | `post-edit-console-warn.js` | After Edit | Warns about `console.log` |
 | `post-bash-pr-log.js` | After Bash | Logs PR URL after `gh pr create` |
+| `post-tool-taint-source.js` | After web/email/chat tools | Marks the session tainted after untrusted external content enters context |
 | `check-console-log.js` | On Stop | Audits all modified files for console.log |
 | `evaluate-session.js` | On Stop | Signals pattern extraction for long sessions |
 | `session-start.js` | Session Start | Loads project knowledge (6 files, 30KB budget) |
+| `session-start-mcp-scan.js` | Session Start | Replays unresolved MCP tool-poisoning findings and refreshes the SHA-256 pin baseline in the background (`MCP_SCAN_DISABLE=1` to disable) |
 | `session-end-obsidian.js` | Session End | Saves status, extracts insights, writes monthly logs |
 | `pre-compact.js` | Before Compact | Saves state before context compression |
 
@@ -120,6 +127,20 @@ Loaded as project instructions in every session:
 - **patterns** — API response format, repository pattern, custom hooks
 - **agents** — When and how to use each agent
 - **performance** — Model selection strategy, context window management
+
+### Agent-safety tooling
+
+Beyond reviewing the code Claude writes, this starter ships a small defensive layer for the **agent itself** — the prompt-injection / malicious-MCP threat class:
+
+| Tool | What it does |
+|------|-------------|
+| `scan-mcp-tools.js` | Enumerates your stdio MCP servers, pins each tool definition's SHA-256, and flags **drift** (rug-pulls / [CVE-2025-54136](https://nvd.nist.gov/vuln/detail/CVE-2025-54136)-style swaps), **tool-poisoning signatures** in any tool field (hidden `<IMPORTANT>` instructions, credential/exfil references — with zero-width/NFKC normalization), and **cross-server name collisions** (shadowing). Trust-on-first-use; run with `--approve` to accept reviewed changes. |
+| `pre-tool-taint-gate.js` + `post-tool-taint-source.js` | Classic taint tracking: a web/email/chat tool marks the session tainted, then the next outbound/exfil action (WebFetch, network Bash, send-capable MCPs) prompts for confirmation. Gates the *action*, not the (undecidable) content. |
+| `audit-tool-responses.js` / `/audit-injection` | Retrospective, read-only scan of past session transcripts (and optionally inbound email + web-clipped notes) for injection signatures in **untrusted-source** tool output. A tripwire, not proof. |
+
+Signatures live in `config/data/mcp-poisoning-patterns.json`. Knobs: `TAINT_GATE_DISABLE=1`, `MCP_SCAN_DISABLE=1`, `MCP_SCAN_THROTTLE_HOURS`.
+
+**Honest scope:** these are advisory checkpoints — **fail-open and ask-only by design**. They raise an attacker's cost and surface the dangerous moment to a human; they do **not** hard-stop a determined, injection-aware attacker (egress paths outside the deny-list and clearing the state file remain bypasses). The sink-gate matchers in `config/settings.hooks.json` and the sink classifier in `config/scripts/lib/taint.js` ship with common MCPs (Gmail, Calendar, Discord, email) as examples — extend both for the write/send tools of whatever servers you run.
 
 ## Customization
 
@@ -216,6 +237,9 @@ All session hooks check for the vault and skip gracefully if not found. You lose
 | `DEV_ROOT` | Parent of this repo | Where the setup scripts install the dev-layer symlinks (set to skip / redirect) |
 | `OBSIDIAN_VAULT` | (none, strictly opt-in) | Path to Obsidian vault for session persistence |
 | `CLAUDE_PACKAGE_MANAGER` | Auto-detected | Force a specific package manager (npm/pnpm/yarn/bun) |
+| `TAINT_GATE_DISABLE` | (unset) | Set to `1` to disable the indirect-injection sink gate entirely |
+| `MCP_SCAN_DISABLE` | (unset) | Set to `1` to disable the SessionStart MCP tool-poisoning warn hook |
+| `MCP_SCAN_THROTTLE_HOURS` | `12` | Hours between background MCP tool-poisoning re-scans |
 
 ## Setup-script flags
 
@@ -253,6 +277,12 @@ Verify all your MCP servers are healthy:
 
 ```bash
 node ~/.claude/scripts/check-mcp-health.js
+```
+
+Scan your registered MCP servers for tool poisoning / rug-pulls (the first run silently pins the baseline; later runs flag drift and signatures):
+
+```bash
+node ~/.claude/scripts/scan-mcp-tools.js          # report; --approve to accept reviewed changes
 ```
 
 ## Context Management
@@ -293,7 +323,7 @@ Maintained by [@SamG0ld](https://github.com/SamG0ld)
 
 | Dependency | Required | What needs it |
 |------------|----------|---------------|
-| [Node.js](https://nodejs.org) | Yes (18+) | Hooks, health check |
+| [Node.js](https://nodejs.org) | Yes (18+) | Hooks, health check, MCP tool-poisoning scanner |
 | [Claude Code CLI](https://claude.ai/code) | Yes | Everything |
 | [Git](https://git-scm.com) | Yes | Clone and sync |
 | [Obsidian](https://obsidian.md) | Optional | Session persistence, knowledge loading |

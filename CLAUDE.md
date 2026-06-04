@@ -11,8 +11,10 @@ Portable Claude Code configuration — agents, commands, rules, hooks, skills, a
 - **`config/CLAUDE.md`** — Global behavioral rules that get installed to `~/.claude/CLAUDE.md` (symlinked at install). Edit there to change rules that apply to all of Claude's sessions on a machine.
 - **`config/rules/`** — Project-instruction rule files (style, security, testing, etc.). Installed to `~/.claude/rules/`.
 - **`config/commands/`** — Slash command definitions. Installed to `~/.claude/commands/`. Filename becomes command name.
-- **`config/scripts/hooks/`** — Lifecycle hooks (session start/end, pre/post tool use). Installed to `~/.claude/scripts/hooks/`.
-- **`config/scripts/lib/`** — Shared utilities (`utils.js`, `obsidian.js`, `package-manager.js`).
+- **`config/scripts/hooks/`** — Lifecycle hooks (session start/end, pre/post tool use, the MCP tool-poisoning warn hook, and the indirect-injection taint gate). Installed to `~/.claude/scripts/hooks/`.
+- **`config/scripts/lib/`** — Shared utilities (`utils.js`, `obsidian.js`, `package-manager.js`, `mcp-scan.js`, `taint.js`).
+- **`config/scripts/`** (top level) — Standalone CLIs: `check-mcp-health.js`, `scan-mcp-tools.js` (MCP tool-poisoning scanner), `audit-tool-responses.js` (retrospective indirect-injection audit). Installed to `~/.claude/scripts/`.
+- **`config/data/`** — Static data files: `security-regex-patterns.json` (secret/vuln patterns), `mcp-poisoning-patterns.json` (tool-poisoning signature pack). Installed to `~/.claude/data/`.
 - **`config/settings.hooks.json`** — Canonical hooks + statusLine block, surgically merged into the user's `~/.claude/settings.json` by `merge-hooks-settings.js`.
 - **`agents/`** — Sub-agent prompts. Installed to `~/.claude/agents/`.
 - **`skills/`** — Static skills. `skills/security-scan/` is the only generic skill shipped; `config/skills/learned/` accumulates patterns from `/learn`.
@@ -32,8 +34,8 @@ Portable Claude Code configuration — agents, commands, rules, hooks, skills, a
 | Component | Count |
 |-----------|-------|
 | Agents | 14 |
-| Commands | 20 |
-| Hooks (lifecycle scripts) | 14 |
+| Commands | 21 |
+| Hooks (lifecycle scripts) | 17 |
 | Rules | 7 |
 | Contexts | 3 |
 | Skills (bundled) | 1 (`security-scan`) |

@@ -164,8 +164,10 @@ if [ -d "$SCRIPT_DIR/config/scripts" ]; then
   # Make .py hooks executable so shebang is honored on mac/linux
   chmod +x "$CLAUDE_DIR/scripts/hooks/"*.py 2>/dev/null || true
   sync_dir "$SCRIPT_DIR/config/scripts/lib" "$CLAUDE_DIR/scripts/lib" "*.js"
-  # Standalone scripts (health check, etc.)
-  [ -f "$SCRIPT_DIR/config/scripts/check-mcp-health.js" ] && cp "$SCRIPT_DIR/config/scripts/check-mcp-health.js" "$CLAUDE_DIR/scripts/"
+  # Standalone scripts (health check, MCP tool-poisoning scanner, injection audit)
+  for s in check-mcp-health.js scan-mcp-tools.js audit-tool-responses.js; do
+    [ -f "$SCRIPT_DIR/config/scripts/$s" ] && cp "$SCRIPT_DIR/config/scripts/$s" "$CLAUDE_DIR/scripts/"
+  done
   echo "  Installed hook scripts"
 fi
 

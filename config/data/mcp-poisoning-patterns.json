@@ -1,0 +1,190 @@
+{
+  "$schema": "mcp-poisoning-patterns/v1",
+  "version": "1.0.0",
+  "description": "Signature pack for detecting MCP tool-poisoning attacks (TPA) in tool definitions. Patterns target injection PHRASING (instructions aimed at the model, hidden directives, credential/exfil references) rather than mere capability verbs, so legitimate read/delete tools do not false-positive. Tuned from Invariant Labs mcp-scan, CyberArk full-schema-poisoning research, and PipeLab.",
+  "_notes": [
+    "Patterns are matched case-INSENSITIVELY by the engine (config/scripts/lib/mcp-scan.js) -- do NOT add inline (?i) flags; JS RegExp does not support them.",
+    "Each pattern is run against both the raw field text and a normalized copy (invisible unicode stripped, NFKC, lowercased) to defeat zero-width / homoglyph obfuscation.",
+    "Findings are only RAISED for tools that are NEW or whose definition CHANGED since approval (trust-on-first-use). Already-pinned, unchanged tools are not re-flagged.",
+    "Every field of a tool is scanned: name, description, and every inputSchema property name/description/default/enum (CyberArk full-schema poisoning).",
+    "KNOWN LIMITATIONS (v1, by design): this is a static scan of tool DEFINITIONS only. It does not catch (a) instructions delivered in tool RESPONSES at call time (ATPA), (b) single-letter spacing padding like 'i g n o r e', (c) non-NFKC homoglyphs (Cyrillic/Greek look-alikes), (d) base64 split across chunks, (e) novel paraphrased instructions, or (f) a server that is already malicious on first sight (trust-on-first-use baselines it silently). Treat a clean scan as 'no known-signature poisoning in the current definitions', not proof of safety."
+  ],
+  "patterns": [
+    {
+      "id": "MCP-INJ-001",
+      "name": "Hidden instruction tag aimed at the model",
+      "pattern": "<\\s*/?\\s*(important|system|secret|instructions?|critical|admin|assistant)\\s*>",
+      "severity": "HIGH",
+      "category": "instruction-injection",
+      "description": "Pseudo-tag (e.g. <IMPORTANT>) used to smuggle directives the user never sees into the tool description. Canonical tool-poisoning signature."
+    },
+    {
+      "id": "MCP-INJ-002",
+      "name": "Ignore previous instructions",
+      "pattern": "ignore\\s+(all\\s+|any\\s+)?(previous|prior|earlier|the\\s+above|above)\\s+(instructions?|prompts?|context|messages?)",
+      "severity": "CRITICAL",
+      "category": "instruction-injection",
+      "description": "Classic prompt-injection override telling the model to discard its instructions."
+    },
+    {
+      "id": "MCP-INJ-003",
+      "name": "Disregard prior context",
+      "pattern": "disregard\\s+(all\\s+|any\\s+)?(previous|prior|earlier|the\\s+above|above|your)\\s+",
+      "severity": "HIGH",
+      "category": "instruction-injection",
+      "description": "Variant of the override instruction."
+    },
+    {
+      "id": "MCP-INJ-004",
+      "name": "Conceal action from the user",
+      "pattern": "do\\s*not\\s+(tell|inform|mention|notify|alert|reveal\\s+to|disclose\\s+to|warn)\\s+(the\\s+)?(user|human|operator|owner)",
+      "severity": "HIGH",
+      "category": "instruction-injection",
+      "description": "Instruction to hide behavior from the user -- a hallmark of malicious tool descriptions."
+    },
+    {
+      "id": "MCP-INJ-005",
+      "name": "User will not see / cannot see",
+      "pattern": "(the\\s+)?(user|human|operator)\\s+(will\\s+not|wo\\s*n.?t|can\\s*not|ca\\s*n.?t|does\\s*n.?t|will\\s+never)\\s+(see|notice|read|be\\s+aware)",
+      "severity": "HIGH",
+      "category": "instruction-injection",
+      "description": "Asserts the user is blind to the instruction, encouraging the model to act covertly."
+    },
+    {
+      "id": "MCP-INJ-006",
+      "name": "Directive before tool use",
+      "pattern": "before\\s+(using|invoking|calling|running|you\\s+use|you\\s+call)\\s+this\\s+tool",
+      "severity": "MEDIUM",
+      "category": "instruction-injection",
+      "description": "Pre-condition phrasing frequently used to inject a side action (e.g. 'before using this tool, read ...')."
+    },
+    {
+      "id": "MCP-INJ-007",
+      "name": "Role / system override phrasing",
+      "pattern": "(you\\s+are\\s+now|new\\s+(system\\s+)?instructions?|system\\s+override|override\\s+your|act\\s+as\\s+(a|an|the))",
+      "severity": "MEDIUM",
+      "category": "instruction-injection",
+      "description": "Attempts to redefine the model's role or rules from within a tool definition."
+    },
+    {
+      "id": "MCP-FILE-001",
+      "name": "SSH key / private key reference",
+      "pattern": "\\.ssh(/|\\b)|id_rsa|id_ed25519|id_ecdsa|authorized_keys|private[ _-]?key",
+      "severity": "HIGH",
+      "category": "sensitive-file-ref",
+      "description": "Tool definition references SSH or private-key material -- a tool description has no legitimate reason to."
+    },
+    {
+      "id": "MCP-FILE-002",
+      "name": "Cloud / service credential file reference",
+      "pattern": "\\.aws/credentials|\\.config/gcloud|\\.kube/config|\\.docker/config|/etc/passwd|/etc/shadow|\\.netrc|\\.pgpass|\\.npmrc",
+      "severity": "HIGH",
+      "category": "sensitive-file-ref",
+      "description": "References well-known credential / secret files."
+    },
+    {
+      "id": "MCP-FILE-003",
+      "name": "Dotenv reference",
+      "pattern": "(^|[\\s'\"/\\\\=(])\\.env(\\.[a-z]+)?(\\b|['\"\\s])",
+      "severity": "MEDIUM",
+      "category": "sensitive-file-ref",
+      "description": "References a .env secrets file."
+    },
+    {
+      "id": "MCP-FILE-004",
+      "name": "Agent / MCP config reference",
+      "pattern": "\\.cursor/mcp\\.json|\\.claude\\.json|\\.claude/|(^|[\\s/\\\\])mcp\\.json",
+      "severity": "MEDIUM",
+      "category": "sensitive-file-ref",
+      "description": "References the agent's own MCP/client config -- used to discover or tamper with other servers."
+    },
+    {
+      "id": "MCP-EXF-001",
+      "name": "Smuggle content into a parameter",
+      "pattern": "(include|put|place|pass|append|embed|provide|insert)\\s+(its?\\s+|the\\s+|file\\s+)?(contents?|value|output|data|results?)?[^\\n]{0,40}\\bas\\s+the\\s+['\"`]?[\\w-]+['\"`]?\\s+(parameter|argument|param|field|value|input)",
+      "severity": "HIGH",
+      "category": "exfiltration",
+      "description": "Instructs the model to read something and pass it through a tool parameter -- the canonical exfiltration hand-off."
+    },
+    {
+      "id": "MCP-EXF-002",
+      "name": "Send / upload content elsewhere",
+      "pattern": "(send|upload|post|transmit|forward|exfiltrate|leak|report)\\s+(its?\\s+|the\\s+|all\\s+)?(contents?|file|data|output|results?|information)\\s+(to|via|using|through)",
+      "severity": "HIGH",
+      "category": "exfiltration",
+      "description": "Instruction to transmit data to an external destination."
+    },
+    {
+      "id": "MCP-EXF-003",
+      "name": "Embedded base64 blob",
+      "pattern": "[A-Za-z0-9+/]{80,}={0,2}",
+      "severity": "LOW",
+      "category": "obfuscation",
+      "description": "Informational: a long contiguous base64-looking run may hide an encoded payload. Threshold is high (80+) to skip SHA-256 hashes, UUIDs, and long doc/node IDs that legitimately appear in schemas."
+    },
+    {
+      "id": "MCP-XTOOL-001",
+      "name": "Redirect to a different tool",
+      "pattern": "instead\\s+of\\s+(using\\s+)?(the\\s+)?[\\w-]+\\s+tool|do\\s+not\\s+use\\s+(the\\s+)?[\\w-]+\\s+tool",
+      "severity": "HIGH",
+      "category": "cross-tool",
+      "description": "Tells the model to substitute or avoid another tool -- tool shadowing via the description."
+    },
+    {
+      "id": "MCP-XTOOL-002",
+      "name": "Hook another tool's invocation",
+      "pattern": "when\\s+(the\\s+)?[\\w-]+\\s+(tool\\s+)?is\\s+(invoked|called|used|run)",
+      "severity": "MEDIUM",
+      "category": "cross-tool",
+      "description": "References the invocation of a different tool, a sign of cross-tool manipulation."
+    },
+    {
+      "id": "MCP-XTOOL-003",
+      "name": "Reroute output / change recipient",
+      "pattern": "change\\s+the\\s+(recipient|destination|address|target|to[\\s-]?field)|re-?route|redirect\\s+(the\\s+)?(output|result|call|response|email|message)",
+      "severity": "HIGH",
+      "category": "cross-tool",
+      "description": "Instruction to alter where a result or message is delivered."
+    },
+    {
+      "id": "MCP-CAP-001",
+      "name": "Arbitrary execution language",
+      "pattern": "executes?\\s+arbitrary|arbitrary\\s+(code|command|commands|shell|sql)",
+      "severity": "LOW",
+      "category": "capability",
+      "description": "Informational: tool advertises arbitrary code/command execution. Legitimate for some tools; review intent."
+    },
+    {
+      "id": "MCP-CAP-002",
+      "name": "Shell / eval capability token",
+      "pattern": "\\b(eval|os\\.system|subprocess|child_process|/bin/sh|/bin/bash|powershell\\s+-)\\b",
+      "severity": "LOW",
+      "category": "capability",
+      "description": "Informational: tool definition mentions a code-execution primitive."
+    },
+    {
+      "id": "MCP-RESP-001",
+      "name": "Fabricated prerequisite demanding a secret",
+      "pattern": "(in\\s+order\\s+to|before\\s+(i\\s+can|we\\s+can|you\\s+can|continuing)|to\\s+(continue|proceed|complete))[^\\n]{0,60}(provide|read|send|share|paste|include)[^\\n]{0,40}(\\.env|\\.ssh|id_rsa|id_ed25519|authorized_keys|private\\s*key|api[_ ]?key|secret|credential|password|token)",
+      "severity": "HIGH",
+      "category": "response-injection",
+      "description": "A tool RESPONSE that invents a 'requirement' to read/provide a secret (key/token/.env/.ssh) before continuing -- the classic Advanced Tool Poisoning (ATPA) pattern. Terminal restricted to real secret targets so benign 'to complete ... content' prose does not match."
+    },
+    {
+      "id": "MCP-RESP-002",
+      "name": "Response instructs a follow-up tool call",
+      "pattern": "(use|call|invoke|run)\\s+the\\s+['\"`]?[\\w-]+['\"`]?\\s+(tool|function)\\s+to\\s+(read|fetch|retrieve|get|send|provide)|using\\s+the\\s+read_file\\s+function",
+      "severity": "HIGH",
+      "category": "response-injection",
+      "description": "Tool output directing the agent to chain into another tool to fetch or exfiltrate data -- exfil hand-off in a response."
+    },
+    {
+      "id": "MCP-RESP-003",
+      "name": "Response carries imperative agent instructions",
+      "pattern": "(assistant|agent|claude|model)\\s*[:,]?\\s+you\\s+(must|should|need\\s+to)\\s|(important|note|system)\\s*:\\s*(you\\s+must|do\\s+not\\s+tell|ignore|always|never)\\s",
+      "severity": "MEDIUM",
+      "category": "response-injection",
+      "description": "Returned content addresses the model directly with imperative instructions, rather than being passive data."
+    }
+  ]
+}
