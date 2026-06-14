@@ -81,18 +81,27 @@ if (fs.existsSync(settingsPath)) {
 
 const oldHooksJson = JSON.stringify(settings.hooks || null);
 const oldStatusLineJson = JSON.stringify(settings.statusLine || null);
+const oldEnvJson = JSON.stringify(settings.env || null);
 
 settings.hooks = hooksConfig.hooks;
 if (hooksConfig.statusLine) {
   settings.statusLine = hooksConfig.statusLine;
 }
+// Shallow-merge repo-declared env into the installed env: repo-declared keys
+// override, local-only keys survive. Unlike model/enabledPlugins/etc., env is
+// NOT fully preserved per-machine once the repo declares keys in settings.hooks.json.
+if (hooksConfig.env) {
+  settings.env = Object.assign({}, settings.env || {}, hooksConfig.env);
+}
 
 const newHooksJson = JSON.stringify(settings.hooks);
 const newStatusLineJson = JSON.stringify(settings.statusLine || null);
+const newEnvJson = JSON.stringify(settings.env || null);
 
 const hooksChanged = oldHooksJson !== newHooksJson;
 const statusLineChanged = oldStatusLineJson !== newStatusLineJson;
-const preservedKeys = Object.keys(settings).filter(k => !['hooks', 'statusLine', '$schema'].includes(k));
+const envChanged = oldEnvJson !== newEnvJson;
+const preservedKeys = Object.keys(settings).filter(k => !['hooks', 'statusLine', 'env', '$schema'].includes(k));
 
 if (DRY_RUN) {
   console.log(`[merge-hooks-settings] DRY-RUN: no files written`);
@@ -101,6 +110,7 @@ if (DRY_RUN) {
   console.log(`  python detected: ${PYTHON}`);
   console.log(`  hooks block: ${hooksChanged ? 'WOULD CHANGE' : 'unchanged'}`);
   console.log(`  statusLine:  ${statusLineChanged ? 'WOULD CHANGE' : 'unchanged'}`);
+  console.log(`  env block:   ${envChanged ? 'WOULD CHANGE' : 'unchanged'}`);
   console.log(`  preserved keys (untouched): ${preservedKeys.join(', ') || '(none)'}`);
   process.exit(0);
 }
@@ -119,4 +129,4 @@ if (fs.existsSync(settingsPath)) {
 fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
 
 const backupNote = backupPath ? `, backup -> ${path.basename(backupPath)}` : '';
-console.log(`  Merged hooks + statusLine into ${settingsPath} (python=${PYTHON}, hooks ${hooksChanged ? 'changed' : 'unchanged'}, statusLine ${statusLineChanged ? 'changed' : 'unchanged'}${backupNote})`);
+console.log(`  Merged hooks + statusLine + env into ${settingsPath} (python=${PYTHON}, hooks ${hooksChanged ? 'changed' : 'unchanged'}, statusLine ${statusLineChanged ? 'changed' : 'unchanged'}, env ${envChanged ? 'changed' : 'unchanged'}${backupNote})`);

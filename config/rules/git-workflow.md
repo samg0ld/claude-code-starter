@@ -1,45 +1,17 @@
 # Git Workflow
 
-## Commit Message Format
-
-```
-<type>: <description>
-
-<optional body>
-```
+## Commit messages
+One line, always: `<type>: <description>` and nothing else. No body, no bullet list, no paragraph unless you explicitly ask for a detailed message. The diff explains the change; the message doesn't need to.
 
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Note: AI attribution (Co-Authored-By, "Generated with Claude Code") is disabled via the `attribution` setting in `~/.claude/settings.json`.
+AI attribution (Co-Authored-By, "Generated with Claude Code") is never added, and is also disabled via the `attribution` setting in `~/.claude/settings.json`.
 
-## Pull Request Workflow
+## Pull requests
+1. Analyze the full commit history, not just the latest commit (`git diff <base-branch>...HEAD`).
+2. Draft a clear PR summary.
+3. Include a test plan.
+4. Push with `-u` for a new branch.
 
-When creating PRs:
-1. Analyze full commit history (not just latest commit)
-2. Use `git diff [base-branch]...HEAD` to see all changes
-3. Draft comprehensive PR summary
-4. Include test plan with TODOs
-5. Push with `-u` flag if new branch
-
-## Feature Implementation Workflow
-
-1. **Plan First**
-   - Use **planner** agent to create implementation plan
-   - Identify dependencies and risks
-   - Break down into phases
-
-2. **TDD Approach**
-   - Use **tdd-guide** agent
-   - Write tests first (RED)
-   - Implement to pass tests (GREEN)
-   - Refactor (IMPROVE)
-   - Verify 80%+ coverage
-
-3. **Code Review**
-   - Use **code-reviewer** agent immediately after writing code
-   - Address CRITICAL and HIGH issues
-   - Fix MEDIUM issues when possible
-
-4. **Commit & Push**
-   - Detailed commit messages
-   - Follow conventional commits format
+## Feature workflow
+Plan first (use the **planner** agent for complex work), write tests first (**tdd-guide**), code-review after writing (**code-reviewer**, addressing critical and high issues), then commit and push.

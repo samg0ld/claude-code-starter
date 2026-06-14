@@ -1,70 +1,20 @@
 # Coding Style
 
-## Immutability (CRITICAL)
+## Immutability
+Create new objects rather than mutating existing ones. Spread or copy and return a new value instead of assigning to a field in place.
 
-ALWAYS create new objects, NEVER mutate:
-
-```javascript
-// WRONG: Mutation
-function updateUser(user, name) {
-  user.name = name  // MUTATION!
-  return user
-}
-
-// CORRECT: Immutability
-function updateUser(user, name) {
-  return {
-    ...user,
-    name
-  }
-}
-```
-
-## File Organization
-
-MANY SMALL FILES > FEW LARGE FILES:
+## File organization
+Prefer many small files over few large ones:
 - High cohesion, low coupling
 - 200-400 lines typical, 800 max
-- Extract utilities from large components
+- Extract utilities out of large components
 - Organize by feature/domain, not by type
 
-## Error Handling
+## Error handling
+Handle errors at the boundary: catch, log with context, and surface a clear, user-meaningful message rather than a raw stack trace.
 
-ALWAYS handle errors comprehensively:
+## Input validation
+Validate external input at the boundary (e.g. a zod schema) before trusting it.
 
-```typescript
-try {
-  const result = await riskyOperation()
-  return result
-} catch (error) {
-  console.error('Operation failed:', error)
-  throw new Error('Detailed user-friendly message')
-}
-```
-
-## Input Validation
-
-ALWAYS validate user input:
-
-```typescript
-import { z } from 'zod'
-
-const schema = z.object({
-  email: z.string().email(),
-  age: z.number().int().min(0).max(150)
-})
-
-const validated = schema.parse(input)
-```
-
-## Code Quality Checklist
-
-Before marking work complete:
-- [ ] Code is readable and well-named
-- [ ] Functions are small (<50 lines)
-- [ ] Files are focused (<800 lines)
-- [ ] No deep nesting (>4 levels)
-- [ ] Proper error handling
-- [ ] No console.log statements
-- [ ] No hardcoded values
-- [ ] No mutation (immutable patterns used)
+## Quality checklist
+Before marking work complete: readable and well-named, small functions, focused files (under 800 lines), no deep nesting, proper error handling, no leftover console.log, no hardcoded values, immutable patterns used.

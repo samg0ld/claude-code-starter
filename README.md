@@ -103,7 +103,7 @@ Hooks run automatically at specific lifecycle points:
 | `pre-bash-tmux-suggest.js` | Before Bash | Suggests tmux for long-running commands |
 | `pre-bash-git-push.js` | Before Bash | Warns before git push |
 | `context-guard.js` | Before Edit/Write/Bash | Warns when context window is getting full |
-| `pre-tool-taint-gate.js` | Before Bash/WebFetch/send-MCPs | Asks for confirmation before an outbound/exfil action when the session is tainted by untrusted content (`TAINT_GATE_DISABLE=1` to disable) |
+| `pre-tool-taint-gate.js` | Before Bash/WebFetch/send-MCPs | Asks for confirmation before an outbound/exfil action when the session is tainted by untrusted content (**ships disabled by default** via `TAINT_GATE_DISABLE=1`; remove that env entry in `settings.hooks.json` to enable) |
 | `post-edit-format.js` | After Edit | Auto-formats with Prettier |
 | `post-edit-typecheck.js` | After Edit (.ts/.tsx) | Runs `tsc --noEmit` |
 | `post-edit-console-warn.js` | After Edit | Warns about `console.log` |
@@ -140,7 +140,7 @@ Beyond reviewing the code Claude writes, this starter ships a small defensive la
 
 Signatures live in `config/data/mcp-poisoning-patterns.json`. Knobs: `TAINT_GATE_DISABLE=1`, `MCP_SCAN_DISABLE=1`, `MCP_SCAN_THROTTLE_HOURS`.
 
-**Honest scope:** these are advisory checkpoints — **fail-open and ask-only by design**. They raise an attacker's cost and surface the dangerous moment to a human; they do **not** hard-stop a determined, injection-aware attacker (egress paths outside the deny-list and clearing the state file remain bypasses). The sink-gate matchers in `config/settings.hooks.json` and the sink classifier in `config/scripts/lib/taint.js` ship with common MCPs (Gmail, Calendar, Discord, email) as examples — extend both for the write/send tools of whatever servers you run.
+**Honest scope:** these are advisory checkpoints — **fail-open and ask-only by design**. They raise an attacker's cost and surface the dangerous moment to a human; they do **not** hard-stop a determined, injection-aware attacker (egress paths outside the deny-list and clearing the state file remain bypasses). The sink-gate matchers in `config/settings.hooks.json` and the sink classifier in `config/scripts/lib/taint.js` ship with common MCPs (Gmail, Calendar, Discord, email) as examples — extend both for the write/send tools of whatever servers you run. The gate **ships disabled by default** (`TAINT_GATE_DISABLE=1` in `config/settings.hooks.json`); remove that env entry to turn it on.
 
 ## Customization
 
@@ -237,7 +237,7 @@ All session hooks check for the vault and skip gracefully if not found. You lose
 | `DEV_ROOT` | Parent of this repo | Where the setup scripts install the dev-layer symlinks (set to skip / redirect) |
 | `OBSIDIAN_VAULT` | (none, strictly opt-in) | Path to Obsidian vault for session persistence |
 | `CLAUDE_PACKAGE_MANAGER` | Auto-detected | Force a specific package manager (npm/pnpm/yarn/bun) |
-| `TAINT_GATE_DISABLE` | (unset) | Set to `1` to disable the indirect-injection sink gate entirely |
+| `TAINT_GATE_DISABLE` | `1` (ships disabled) | The indirect-injection sink gate is off by default; remove this entry from `settings.hooks.json` (or set to `0`) to enable it |
 | `MCP_SCAN_DISABLE` | (unset) | Set to `1` to disable the SessionStart MCP tool-poisoning warn hook |
 | `MCP_SCAN_THROTTLE_HOURS` | `12` | Hours between background MCP tool-poisoning re-scans |
 
